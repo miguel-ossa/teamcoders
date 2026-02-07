@@ -1,17 +1,66 @@
-research_task:
+design_task:
   description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is {current_year}.
+    Toma los requisitos de alto nivel descritos aquí y prepara un diseño detallado
+    para el ingeniero. Todo debe estar en un solo módulo de Python, pero detalla
+    las clases y métodos en el módulo.
+    Aquí están los requisitos: {requirements}
+    IMPORTANTE: solo entrega el diseño en formato markdown, detallando las clases
+    y funciones del módulo y describiendo su funcionalidad
   expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
+    Un diseño detallado para el ingeniero, identificando las clases y funciones
+    del módulo.
+  agent: engineering_lead
+  output_file: output/{module_name}_design.md
 
-reporting_task:
+code_task:
   description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
+    Escribe un módulo Python que implemente el diseño descrito por el líder de
+    ingeniería, con el fin de cumplir con los requisitos especificados.
+    Aquí están los requisitos: {requirements}
   expected_output: >
-    A fully fledged report with the main topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
+    Un módulo de Python que implemente el diseño y cumpla los requisitos.
+    IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown,
+    delimitadores de bloque de código ni comillas invertidas.
+    La salida debe ser código Python válido que pueda guardarse directamente
+    en un archivo y ejecutarse.
+  agent: backend_engineer
+  context:
+    - design_task
+  output_file: output/{module_name}
+
+frontend_task:
+  description: >
+    Escribe una interfaz con Gradio en un módulo llamado app.py que demuestre
+    la clase backend dada en {module_name}.
+    Supón que hay un solo usuario y mantén la interfaz muy simple, solo con un
+    prototipo o demostración.
+    Aquí están los requisitos: {requirements}
+  expected_output: >
+    Una interfaz con Gradio en el módulo app.py que demuestre la clase backend dada.
+    El archivo debe estar listo para ejecutarse tal cual, en el mismo directorio
+    que el módulo backend, e importar la clase backend desde {module_name}.
+    IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown,
+    delimitadores de código ni comillas invertidas.
+    La salida debe ser código Python válido que pueda guardarse directamente en un
+    archivo y ejecutarse.
+  agent: frontend_engineer
+  context:
+    - code_task
+  output_file: output/app.py
+
+test_task:
+  description: >
+    Escribe pruebas unitarias para el módulo backend {module_name} y crea un archivo
+    de test test_{module_name} en el mismo directorio que el módulo backend.
+  expected_output: >
+    Un módulo test_{module_name} que pruebe el módulo backend dado.
+    IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown, delimitadores
+    de bloque de código ni comillas invertidas.
+    La salida debe ser código Python válido que pueda guardarse directamente en
+    un archivo y ejecutarse.
+    Añade /app/output al PYTHONPATH para asegurarte que las ejecuciones sean correctas.
+  agent: test_engineer
+  context:
+    - code_task
+  output_file: output/test_{module_name}
+

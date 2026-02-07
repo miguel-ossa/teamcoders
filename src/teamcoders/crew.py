@@ -16,37 +16,70 @@ class Teamcoders():
     # Learn more about YAML configuration files here:
     # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
     # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
+
     # If you would like to add tools to your agents, you can learn more about it here:
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
-    def researcher(self) -> Agent:
+    def engineering_lead(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
+            config=self.agents_config['engineering_lead'], # type: ignore[index]
             verbose=True
         )
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def backend_engineer(self) -> Agent:
         return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
+            config=self.agents_config['backend_engineer'], # type: ignore[index]
+            verbose=True,
+            allow_code_execution=True,
+            code_execution_mode="safe", # uses Docker for safety
+            max_execution_time=500,
+            max_retry_limit=3
+        )
+
+    @agent
+    def frontend_engineer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['frontend_engineer'], # type: ignore[index]
             verbose=True
+        )
+
+    @agent
+    def test_engineer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['test_engineer'], # type: ignore[index]
+            verbose=True,
+            allow_code_execution=True,
+            code_execution_mode="safe", # uses Docker for safety
+            max_execution_time=500,
+            max_retry_limit=3
         )
 
     # To learn more about structured task outputs,
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
-    def research_task(self) -> Task:
+    def design_task(self) -> Task:
         return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
+            config=self.tasks_config['design_task'], # type: ignore[index]
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def code_task(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
-            output_file='report.md'
+            config=self.tasks_config['code_task'], # type: ignore[index]
+        )
+
+    @task
+    def frontend_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['frontend_task'], # type: ignore[index]
+        )
+
+    @task
+    def test_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['test_task'], # type: ignore[index]
         )
 
     @crew
