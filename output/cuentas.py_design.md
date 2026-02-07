@@ -1,61 +1,166 @@
 ```markdown
-# Diseño del Módulo: cuentas.py
+# Diseño detallado del módulo cuentas.py
 
-Este módulo `cuentas.py` proporciona un sistema de gestión de cuentas para una plataforma de simulación de trading. Aquí se detalla la clase `Cuenta` junto con sus métodos, cubriendo todas las funcionalidades requeridas.
+Este diseño describe una implementación Python para un sistema simple de gestión de cuentas para una plataforma de simulación de trading. Todo se organizará dentro de un solo módulo llamado `cuentas.py`.
 
-## Clase: Cuenta
+---
 
-La clase `Cuenta` representa una cuenta de usuario en el sistema de simulación de trading. Administra fondos, transacciones y portafolios de acciones.
+## Clase principal
 
-### Atributos
+### Cuenta
 
-- `user_id: str`
-  - Identificador único del usuario.
-  
-- `balance: float`
-  - Cantidad actual de fondos disponibles en la cuenta.
-  
-- `initial_deposit: float`
-  - Depósito inicial realizado al crear la cuenta (usado para calcular ganancias y pérdidas).
-  
-- `portfolio: dict`
-  - Un diccionario que mantiene el símbolo de la acción como clave y la cantidad de acciones como valor.
-  
-- `transactions: list`
-  - Una lista de tuplas que registran todas las transacciones realizadas. Cada tupla puede contener información sobre el tipo de transacción, símbolo, cantidad y fecha.
+Representa una cuenta de usuario que permite gestionar depósitos, retiros, compras y ventas de acciones, y consultar estado y transacciones.
 
-### Métodos
+**Atributos internos (privados):**
 
-- `__init__(self, user_id: str, initial_deposit: float) -> None`
-  - Constructor que establece el identificador de usuario. Inicializa el depósito inicial, balance, portafolio y lista de transacciones.
+- `_saldo_efectivo: float`  
+  Saldo disponible en efectivo (dinero no invertido).
 
-- `depositar_fondos(self, monto: float) -> None`
-  - Permite al usuario depositar fondos en su cuenta, aumentando el balance. 
+- `_deposito_inicial: float`  
+  Monto total depositado inicialmente (acumulado de depósitos).
 
-- `retirar_fondos(self, monto: float) -> bool`
-  - Permite al usuario retirar fondos de su cuenta. Verifica que el monto no resulte en un saldo negativo; retorna `True` si el retiro fue exitoso, `False` en caso contrario.
+- `_tenencias: Dict[str, int]`  
+  Diccionario que mapea símbolo de acción (ej. "AAPL") a la cantidad de acciones poseídas.
 
-- `comprar_acciones(self, simbolo: str, cantidad: int) -> bool`
-  - Registra la compra de acciones. Calcula el costo total, verifica que haya fondos suficientes, ajusta el balance y actualiza el portafolio. Retorna `True` si la compra es exitosa, `False` en caso contrario.
+- `_transacciones: List[Dict]`  
+  Lista de transacciones realizadas. Cada transacción es un diccionario con campos:  
+  - `tipo`: "deposito", "retiro", "compra", "venta"  
+  - `simbolo`: (opcional) símbolo de acción  
+  - `cantidad`: (opcional) cantidad de acciones o monto dinero  
+  - `precio_unitario`: (opcional) precio por acción en transacciones de compra/venta  
+  - `fecha`: timestamp o string fecha (puede ser asignado en el momento de la transacción)
 
-- `vender_acciones(self, simbolo: str, cantidad: int) -> bool`
-  - Registra la venta de acciones. Verifica que el usuario posea suficientes acciones, ajusta el balance y el portafolio. Retorna `True` si la venta es exitosa, `False` en caso contrario.
+---
 
-- `valor_portafolio(self) -> float`
-  - Calcula y retorna el valor total del portafolio del usuario usando los precios actuales de las acciones obtenidos por `get_share_pryce(simbol)`.
+## Funciones externas en el módulo
 
-- `ganancias_perdidas(self) -> float`
-  - Calcula y retorna la ganancia o pérdida neta en comparación con el depósito inicial.
+```python
+def get_share_price(symbol: str) -> float:
+    """
+    Función simulada para obtener el precio actual de una acción.
+    Implementación de prueba incluye precios fijos para:
+    - AAPL: 150.0
+    - TSLA: 700.0
+    - GOOGL: 2800.0
 
-- `informar_tenencias(self) -> dict`
-  - Retorna un diccionario con las tenencias actuales del usuario (simbolos y cantidades).
+    Parámetros:
+    - symbol: str, síbolo de la acción
 
-- `informar_transacciones(self) -> list`
-  - Retorna una lista de todas las transacciones realizadas por el usuario.
+    Retorna:
+    - float: precio unitario actual de la acción
 
-## Función Externa
-
-- `get_share_pryce(symbol: str) -> float`
-  - Función externa que provee el precio actual de una acción dado su símbolo. Implementación de prueba incluida en el módulo devuelve precios fijos para AAPL, TSLA y GOOGL.
+    Lanza excepción si símbolo no reconocido.
+    """
 ```
-Este diseño cubre todos los requisitos detallados, asegurando un sistema efectivo y robusto para gestionar las cuentas de usuarios en una plataforma de simulación de trading.
+
+---
+
+## Métodos públicos de la clase Cuenta
+
+```python
+class Cuenta:
+
+    def __init__(self):
+        """
+        Inicializa una cuenta vacía con saldo cero y sin tenencias.
+        """
+    
+    def depositar(self, monto: float) -> None:
+        """
+        Deposita fondos en la cuenta, incrementando saldo efectivo y depósito inicial.
+        Parámetros: 
+            - monto: float, monto positivo a depositar
+        Lanza excepción si monto <= 0.
+        Registra la transacción.
+        """
+
+    def retirar(self, monto: float) -> None:
+        """
+        Retira fondos del saldo efectivo.
+        Parámetros:
+            - monto: float, monto positivo a retirar
+        Lanza excepción si monto <= 0 o si el retiro dejaría saldo negativo.
+        Registra la transacción.
+        """
+
+    def comprar_acciones(self, simbolo: str, cantidad: int) -> None:
+        """
+        Registra la compra de acciones.
+        Parámetros:
+            - simbolo: str, símbolo de la acción (ej. "AAPL")
+            - cantidad: int, cantidad de acciones a comprar (> 0)
+        Valida que el usuario tiene saldo efectivo suficiente para pagar la compra.
+        Actualiza tenencias y saldo efectivo.
+        Registra la transacción (incluye precio unitario actual).
+        Lanza excepción en caso de fondos insuficientes o cantidad inválida.
+        """
+
+    def vender_acciones(self, simbolo: str, cantidad: int) -> None:
+        """
+        Registra la venta de acciones.
+        Parámetros:
+            - simbolo: str, símbolo de la acción
+            - cantidad: int, cantidad de acciones a vender (> 0)
+        Valida que el usuario posee suficientes acciones.
+        Aumenta el saldo efectivo según precio unitario actual * cantidad.
+        Actualiza tenencias y saldo.
+        Registra la transacción (incluye precio unitario actual).
+        Lanza excepción si la cantidad inválida o acciones insuficientes.
+        """
+
+    def obtener_tenencias(self) -> Dict[str, int]:
+        """
+        Retorna un diccionario con las tenencias actuales (símbolo -> cantidad).
+        """
+
+    def valor_portafolio(self) -> float:
+        """
+        Calcula y retorna el valor total del portafolio actual:
+        saldo efectivo + suma (cantidad acciones * precio actual).
+        """
+
+    def ganancias_perdidas(self) -> float:
+        """
+        Calcula y retorna la ganancia o pérdida neta en relación al depósito total:
+        (valor_portafolio - deposito_inicial)
+        Puede ser positivo o negativo.
+        """
+
+    def listar_transacciones(self) -> List[Dict]:
+        """
+        Retorna la lista completa de transacciones realizadas en orden cronológico.
+        Cada transacción incluye tipo, símbolo (si aplica), cantidad, precio unitario (si aplica), y fecha.
+        """
+
+```
+
+---
+
+## Consideraciones adicionales
+
+- Se usará manejo básico de excepciones para invalidar operaciones no permitidas (fondos insuficientes, cantidades <=0, símbolos inválidos).
+- Las fechas en transacciones serán definidas en el momento de la operación, usando datetime estándar.
+- El sistema solo maneja tres acciones con precio fijo para pruebas, pero la estructura permite ampliar `get_share_price`.
+- Todas las unidades monetarias serán float para permitir centavos.
+- El estado interno es privado para evitar manipulación externa directa.
+
+---
+
+## Resumen
+
+| Clase     | Método                 | Función principal                                            |
+|-----------|------------------------|-------------------------------------------------------------|
+| Cuenta    | `__init__()`           | Crear cuenta vacía                                           |
+| Cuenta    | `depositar(monto)`     | Depositar efectivo en la cuenta                              |
+| Cuenta    | `retirar(monto)`       | Retirar efectivo, sin saldo negativo                         |
+| Cuenta    | `comprar_acciones(s, c)`| Comprar acciones si hay fondos suficientes                   |
+| Cuenta    | `vender_acciones(s, c)`| Vender acciones si se poseen suficientes                     |
+| Cuenta    | `obtener_tenencias()`  | Devolver las tenencias actuales                              |
+| Cuenta    | `valor_portafolio()`   | Calcular valor total actual (efectivo + acciones)            |
+| Cuenta    | `ganancias_perdidas()` | Calcular ganancias/perdidas respecto al depósito inicial    |
+| Cuenta    | `listar_transacciones()` | Listar todas las transacciones realizadas                    |
+| Módulo    | `get_share_price(symbol)`| Retorna precio actual de la acción (prueba con valores fijos)|
+
+Este diseño es completamente autónomo en un solo módulo, se facilitará su implementación, pruebas unitarias y ampliaciones futuras.
+
+```

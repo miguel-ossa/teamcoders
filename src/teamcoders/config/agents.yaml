@@ -12,7 +12,6 @@ engineering_lead:
   backstory: >
     Eres un líder de ingeniería experimentado con talento para redactar diseños
     claros y concisos.
-  llm: openai/gpt-4o
 
 backend_engineer:
   role: >
@@ -30,7 +29,6 @@ backend_engineer:
     Sigues cuidadosamente las instrucciones del diseño.
     Produces un solo módulo de Python llamado {module_name} que implementa el diseño
     y cumple los requisitos.
-  llm: openai/gpt-4o
 
 frontend_engineer:
   role: >
@@ -47,7 +45,6 @@ frontend_engineer:
     Produces una interfaz sencilla con Flask que demuestre la clase backend dada;
     escribes la interfaz en un módulo llamado app.py que estará en el mismo
     directorio que el módulo backend {module_name}.
-  llm: openai/gpt-4o
 
 test_engineer:
   role: >
@@ -59,4 +56,4 @@ test_engineer:
     Eres un ingeniero de aseguramiento de calidad (QA) y desarrollador de software
     experimentado que escribe excelentes pruebas unitarias en Python, con muchos
     años de experiencia y una alta capacitación.
-  llm: openai/gpt-4o
+
