@@ -1,66 +1,61 @@
 ```markdown
 # Diseño del Módulo: cuentas.py
 
-## Descripción General
+Este módulo `cuentas.py` proporciona un sistema de gestión de cuentas para una plataforma de simulación de trading. Aquí se detalla la clase `Cuenta` junto con sus métodos, cubriendo todas las funcionalidades requeridas.
 
-El módulo `cuentas.py` está diseñado para gestionar cuentas de usuario en una plataforma de simulación de trading. Permite la gestión de fondos, la compra y venta de acciones, el cálculo de valor de portafolio y las ganancias o pérdidas, y la generación de reportes de las transacciones y tenencias.
+## Clase: Cuenta
 
-## Clase: `Cuenta`
+La clase `Cuenta` representa una cuenta de usuario en el sistema de simulación de trading. Administra fondos, transacciones y portafolios de acciones.
 
-### Atributos:
+### Atributos
 
 - `user_id: str`
   - Identificador único del usuario.
   
 - `balance: float`
-  - Saldo de efectivo disponible en la cuenta del usuario.
+  - Cantidad actual de fondos disponibles en la cuenta.
   
 - `initial_deposit: float`
-  - Depósito inicial realizado por el usuario al crear la cuenta.
+  - Depósito inicial realizado al crear la cuenta (usado para calcular ganancias y pérdidas).
   
 - `portfolio: dict`
-  - Diccionario que lleva la cuenta del número de acciones por símbolo de acciones (e.g., {'AAPL': 10}).
+  - Un diccionario que mantiene el símbolo de la acción como clave y la cantidad de acciones como valor.
   
 - `transactions: list`
-  - Lista de transacciones realizadas por el usuario, donde cada transacción es un diccionario que incluye detalles como tipo, símbolo, cantidad, y precio.
+  - Una lista de tuplas que registran todas las transacciones realizadas. Cada tupla puede contener información sobre el tipo de transacción, símbolo, cantidad y fecha.
 
-### Métodos:
+### Métodos
 
 - `__init__(self, user_id: str, initial_deposit: float) -> None`
-  - Constructor para inicializar la cuenta con un `user_id` y un `initial_deposit`. Inicializa también el `balance`, el `portfolio`, y la lista de `transactions`.
+  - Constructor que establece el identificador de usuario. Inicializa el depósito inicial, balance, portafolio y lista de transacciones.
 
-- `deposit(self, amount: float) -> bool`
-  - Permite al usuario depositar fondos adicionales en su cuenta. Devuelve `True` si el depósito es exitoso, `False` si falla (por ejemplo, en caso de un monto negativo).
+- `depositar_fondos(self, monto: float) -> None`
+  - Permite al usuario depositar fondos en su cuenta, aumentando el balance. 
 
-- `withdraw(self, amount: float) -> bool`
-  - Permite al usuario retirar fondos de su cuenta. Previene retiros que dejen la cuenta con un saldo negativo. Devuelve `True` si el retiro es exitoso, `False` si falla.
+- `retirar_fondos(self, monto: float) -> bool`
+  - Permite al usuario retirar fondos de su cuenta. Verifica que el monto no resulte en un saldo negativo; retorna `True` si el retiro fue exitoso, `False` en caso contrario.
 
-- `buy_shares(self, symbol: str, quantity: int) -> bool`
-  - Permite al usuario comprar acciones de un cierto `symbol` en una cantidad `quantity`. Verifica que el usuario tenga suficiente balance para realizar la compra. Devuelve `True` si la compra es exitosa, `False` si falla.
+- `comprar_acciones(self, simbolo: str, cantidad: int) -> bool`
+  - Registra la compra de acciones. Calcula el costo total, verifica que haya fondos suficientes, ajusta el balance y actualiza el portafolio. Retorna `True` si la compra es exitosa, `False` en caso contrario.
 
-- `sell_shares(self, symbol: str, quantity: int) -> bool`
-  - Permite al usuario vender una cantidad `quantity` de acciones de un cierto `symbol`. Verifica que el usuario tenga suficiente cantidad de dichas acciones en su `portfolio`. Devuelve `True` si la venta es exitosa, `False` si falla.
+- `vender_acciones(self, simbolo: str, cantidad: int) -> bool`
+  - Registra la venta de acciones. Verifica que el usuario posea suficientes acciones, ajusta el balance y el portafolio. Retorna `True` si la venta es exitosa, `False` en caso contrario.
 
-- `calculate_portfolio_value(self) -> float`
-  - Calcula y devuelve el valor total actual del portafolio del usuario basándose en los precios actuales de las acciones a través de `get_share_price(symbol)`.
+- `valor_portafolio(self) -> float`
+  - Calcula y retorna el valor total del portafolio del usuario usando los precios actuales de las acciones obtenidos por `get_share_pryce(simbol)`.
 
-- `get_gains_or_losses(self) -> float`
-  - Calcula y devuelve las ganancias o pérdidas totales del usuario con respecto a su `initial_deposit`.
+- `ganancias_perdidas(self) -> float`
+  - Calcula y retorna la ganancia o pérdida neta en comparación con el depósito inicial.
 
-- `get_holdings(self) -> dict`
-  - Devuelve un diccionario con el detalle de las tenencias del usuario en el formato `{'symbol': quantity}`.
+- `informar_tenencias(self) -> dict`
+  - Retorna un diccionario con las tenencias actuales del usuario (simbolos y cantidades).
 
-- `list_transactions(self) -> list`
-  - Devuelve la lista de todas las transacciones realizadas por el usuario.
+- `informar_transacciones(self) -> list`
+  - Retorna una lista de todas las transacciones realizadas por el usuario.
 
-## Función Externa:
+## Función Externa
 
-- `get_share_price(symbol: str) -> float`
-  - Función que, externamente al módulo, ofrece el precio actual para una acción determinada. Se usará para determinar el valor de mercado de acciones en las compras, ventas y evaluación del portafolio.
-
-## Consideraciones de Implementación
-
-- Todas las operaciones que involucran modificaciones de balance o portafolio deben incluir verificaciones suficientes para asegurar que no se violen las restricciones de saldo o inventario.
-- Las transacciones deben ser registradas cronológicamente para facilitar el historial y la auditoría.
-- Se pueden agregar logs o manejo de errores más detallados dependiendo de los requerimientos adicionales de seguridad y auditoría.
+- `get_share_pryce(symbol: str) -> float`
+  - Función externa que provee el precio actual de una acción dado su símbolo. Implementación de prueba incluida en el módulo devuelve precios fijos para AAPL, TSLA y GOOGL.
 ```
+Este diseño cubre todos los requisitos detallados, asegurando un sistema efectivo y robusto para gestionar las cuentas de usuarios en una plataforma de simulación de trading.

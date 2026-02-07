@@ -1,5 +1,3 @@
-# Definición de la clase Cuenta en el módulo cuentas.py
-
 class Cuenta:
     def __init__(self, user_id: str, initial_deposit: float) -> None:
         self.user_id = user_id
@@ -8,82 +6,66 @@ class Cuenta:
         self.portfolio = {}
         self.transactions = []
 
-    def deposit(self, amount: float) -> bool:
-        if amount <= 0:
+    def depositar_fondos(self, monto: float) -> None:
+        self.balance += monto
+        self.transactions.append(('depósito', None, monto, None))
+
+    def retirar_fondos(self, monto: float) -> bool:
+        if monto > self.balance:
             return False
-        self.balance += amount
-        self.transactions.append({
-            'type': 'deposit',
-            'amount': amount
-        })
+        self.balance -= monto
+        self.transactions.append(('retiro', None, monto, None))
         return True
 
-    def withdraw(self, amount: float) -> bool:
-        if amount > self.balance or amount <= 0:
-            return False
-        self.balance -= amount
-        self.transactions.append({
-            'type': 'withdraw',
-            'amount': amount
-        })
-        return True
+    def comprar_acciones(self, simbolo: str, cantidad: int) -> bool:
+        precio = get_share_pryce(simbolo)
+        costo_total = precio * cantidad
 
-    def buy_shares(self, symbol: str, quantity: int) -> bool:
-        price = get_share_price(symbol)
-        cost = price * quantity
-        if cost > self.balance or quantity <= 0:
+        if costo_total > self.balance:
             return False
-        self.balance -= cost
-        if symbol in self.portfolio:
-            self.portfolio[symbol] += quantity
+        
+        self.balance -= costo_total
+        if simbolo in self.portfolio:
+            self.portfolio[simbolo] += cantidad
         else:
-            self.portfolio[symbol] = quantity
-        self.transactions.append({
-            'type': 'buy',
-            'symbol': symbol,
-            'quantity': quantity,
-            'price': price
-        })
+            self.portfolio[simbolo] = cantidad
+        self.transactions.append(('compra', simbolo, cantidad, precio))
         return True
 
-    def sell_shares(self, symbol: str, quantity: int) -> bool:
-        if symbol not in self.portfolio or self.portfolio[symbol] < quantity or quantity <= 0:
+    def vender_acciones(self, simbolo: str, cantidad: int) -> bool:
+        if simbolo not in self.portfolio or self.portfolio[simbolo] < cantidad:
             return False
-        price = get_share_price(symbol)
-        self.balance += price * quantity
-        self.portfolio[symbol] -= quantity
-        if self.portfolio[symbol] == 0:
-            del self.portfolio[symbol]
-        self.transactions.append({
-            'type': 'sell',
-            'symbol': symbol,
-            'quantity': quantity,
-            'price': price
-        })
+
+        precio = get_share_pryce(simbolo)
+        ingreso_total = precio * cantidad
+
+        self.balance += ingreso_total
+        self.portfolio[simbolo] -= cantidad
+        if self.portfolio[simbolo] == 0:
+            del self.portfolio[simbolo]
+
+        self.transactions.append(('venta', simbolo, cantidad, precio))
         return True
 
-    def calculate_portfolio_value(self) -> float:
-        total_value = 0.0
-        for symbol, quantity in self.portfolio.items():
-            total_value += get_share_price(symbol) * quantity
-        return total_value
+    def valor_portafolio(self) -> float:
+        valor_total = 0
+        for simbolo, cantidad in self.portfolio.items():
+            valor_total += get_share_pryce(simbolo) * cantidad
+        return valor_total
 
-    def get_gains_or_losses(self) -> float:
-        current_portfolio_value = self.calculate_portfolio_value()
-        current_balance = self.balance
-        total_value = current_balance + current_portfolio_value
-        return total_value - self.initial_deposit
+    def ganancias_perdidas(self) -> float:
+        return (self.valor_portafolio() + self.balance) - self.initial_deposit
 
-    def get_holdings(self) -> dict:
+    def informar_tenencias(self) -> dict:
         return self.portfolio.copy()
 
-    def list_transactions(self) -> list:
+    def informar_transacciones(self) -> list:
         return self.transactions.copy()
 
-def get_share_price(symbol: str) -> float:
-    prices = {
+def get_share_pryce(symbol: str) -> float:
+    precios = {
         'AAPL': 150.0,
-        'TSLA': 700.0,
+        'TSLA': 650.0,
         'GOOGL': 2800.0
     }
-    return prices.get(symbol, 0.0)
+    return precios.get(symbol.upper(), 0.0)
