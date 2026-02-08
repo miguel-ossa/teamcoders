@@ -1,53 +1,51 @@
 ```python
 def get_share_price(symbol: str) -> float:
-    test_prices = {
-        'AAPL': 150.0,
-        'TSLA': 250.0,
-        'GOOGL': 130.0
+    precios_prueba = {
+        "AAPL": 190.0,
+        "TSLA": 260.0,
+        "GOOGL": 135.0
     }
-    return test_prices.get(symbol, 0.0)
+    return precios_prueba.get(symbol, 0.0)
 
 class Cuenta:
-    def __init__(self, saldo_inicial: float):
-        if not isinstance(saldo_inicial, (int, float)) or saldo_inicial <= 0:
-            raise ValueError("Saldo inicial debe ser un número positivo")
-        self.saldo_inicial = float(saldo_inicial)
-        self.saldo_actual = float(saldo_inicial)
+    def __init__(self, deposito_inicial: float):
+        if deposito_inicial <= 0:
+            raise ValueError("Depósito inicial debe ser positivo.")
+        self.saldo = deposito_inicial
         self.portafolio = {}
+        self.deposito_inicial = deposito_inicial
         self.transacciones = []
 
     def depositar(self, monto: float) -> None:
-        if not isinstance(monto, (int, float)) or monto <= 0:
-            raise ValueError("Monto debe ser un número positivo")
-        self.saldo_actual += monto
+        if monto <= 0:
+            raise ValueError("Monto debe ser positivo.")
+        self.saldo += monto
         self.transacciones.append({
-            'tipo': 'depósito',
-            'monto': monto,
-            'saldo_actual': self.saldo_actual
+            'tipo': 'deposito',
+            'monto': monto
         })
 
     def retirar(self, monto: float) -> None:
-        if not isinstance(monto, (int, float)) or monto <= 0:
-            raise ValueError("Monto debe ser un número positivo")
-        if self.saldo_actual - monto < 0:
-            raise ValueError("No se puede retirar fondos que dejen el saldo negativo")
-        self.saldo_actual -= monto
+        if monto <= 0:
+            raise ValueError("Monto debe ser positivo.")
+        if self.saldo - monto < 0:
+            raise ValueError("No se puede retirar fondos que dejen el saldo negativo.")
+        self.saldo -= monto
         self.transacciones.append({
             'tipo': 'retiro',
-            'monto': monto,
-            'saldo_actual': self.saldo_actual
+            'monto': monto
         })
 
-    def comprar_acciones(self, simbolo: str, cantidad: int) -> None:
-        if not isinstance(simbolo, str) or len(simbolo) == 0:
-            raise ValueError("Símbolo de acción no puede estar vacío")
-        if not isinstance(cantidad, int) or cantidad <= 0:
-            raise ValueError("Cantidad debe ser un entero positivo")
+    def comprar(self, simbolo: str, cantidad: int) -> None:
+        if not simbolo or not isinstance(simbolo, str):
+            raise ValueError("Símbolo no puede estar vacío.")
+        if cantidad <= 0:
+            raise ValueError("Cantidad debe ser positiva.")
         precio = get_share_price(simbolo)
-        costo_total = precio * cantidad
-        if self.saldo_actual < costo_total:
-            raise ValueError("Fondos insuficientes para comprar las acciones")
-        self.saldo_actual -= costo_total
+        total_costo = cantidad * precio
+        if self.saldo < total_costo:
+            raise ValueError("No tiene suficiente saldo para comprar.")
+        self.saldo -= total_costo
         if simbolo in self.portafolio:
             self.portafolio[simbolo] += cantidad
         else:
@@ -56,20 +54,19 @@ class Cuenta:
             'tipo': 'compra',
             'simbolo': simbolo,
             'cantidad': cantidad,
-            'precio': precio,
-            'saldo_actual': self.saldo_actual
+            'monto': total_costo
         })
 
-    def vender_acciones(self, simbolo: str, cantidad: int) -> None:
-        if not isinstance(simbolo, str) or len(simbolo) == 0:
-            raise ValueError("Símbolo de acción no puede estar vacío")
-        if not isinstance(cantidad, int) or cantidad <= 0:
-            raise ValueError("Cantidad debe ser un entero positivo")
+    def vender(self, simbolo: str, cantidad: int) -> None:
+        if not simbolo or not isinstance(simbolo, str):
+            raise ValueError("Símbolo no puede estar vacío.")
+        if cantidad <= 0:
+            raise ValueError("Cantidad debe ser positiva.")
         if simbolo not in self.portafolio or self.portafolio[simbolo] < cantidad:
-            raise ValueError("No se poseen suficientes acciones para vender")
+            raise ValueError("No posee suficientes acciones para vender.")
         precio = get_share_price(simbolo)
-        ganancia = precio * cantidad
-        self.saldo_actual += ganancia
+        total_venta = cantidad * precio
+        self.saldo += total_venta
         self.portafolio[simbolo] -= cantidad
         if self.portafolio[simbolo] == 0:
             del self.portafolio[simbolo]
@@ -77,24 +74,21 @@ class Cuenta:
             'tipo': 'venta',
             'simbolo': simbolo,
             'cantidad': cantidad,
-            'precio': precio,
-            'saldo_actual': self.saldo_actual
+            'monto': total_venta
         })
 
-    def calcular_valor_total(self) -> float:
-        valor_total = 0.0
+    def valor_total_portafolio(self) -> float:
+        total = 0.0
         for simbolo, cantidad in self.portafolio.items():
-            precio = get_share_price(simbolo)
-            valor_total += precio * cantidad
-        return valor_total
+            total += cantidad * get_share_price(simbolo)
+        return total
 
-    def calcular_ganancias_perdidas(self) -> float:
-        valor_total = self.calcular_valor_total()
-        return valor_total - self.saldo_inicial
+    def ganancias_o_perdidas(self) -> float:
+        return self.valor_total_portafolio() - self.deposito_inicial
 
-    def get_tenencias(self) -> dict[str, int]:
+    def obtener_tenencias(self) -> dict:
         return self.portafolio.copy()
 
-    def listar_transacciones(self) -> list[dict]:
+    def obtener_transacciones(self) -> list:
         return self.transacciones.copy()
 ```

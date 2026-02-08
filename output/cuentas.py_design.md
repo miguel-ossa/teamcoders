@@ -1,156 +1,141 @@
 # Diseño del módulo `cuentas.py`
 
-## Clase `Cuenta`
-La clase `Cuenta` representa una cuenta de usuario en el sistema de gestión de cuentas para la plataforma de simulación de trading. Incluye métodos para gestionar saldos, transacciones, portafolio y cálculos de ganancias/pérdidas.
+## Clase: `Cuenta`
 
 ### Atributos
-- `saldo_inicial`: El valor del depósito inicial del usuario (float).
-- `saldo_actual`: El saldo actual de la cuenta (float).
-- `portafolio`: Un diccionario que mapea símbolos de acciones a la cantidad poseída (dict[str, int]).
-- `transacciones`: Una lista de transacciones registradas (list[dict]).
+- `saldo`: `float` - Saldo actual de la cuenta.
+- `portafolio`: `Dict[str, int]` - Diccionario que mapea símbolos de acciones a la cantidad poseída.
+- `deposito_inicial`: `float` - Valor del depósito inicial realizado por el usuario.
+- `transacciones`: `List[Dict[str, Any]]` - Lista de todas las transacciones realizadas por el usuario.
+
+---
 
 ### Métodos
 
-#### `__init__(self, saldo_inicial: float)`
-- **Descripción**: Inicializa una nueva cuenta con un saldo inicial especificado. 
-- **Validación**: El `saldo_inicial` debe ser un valor numérico positivo.
+#### `__init__(self, deposito_inicial: float)`
+- **Descripción**: Inicializa una nueva cuenta con un depósito inicial.
+- **Validaciones**:
+  - `deposito_inicial` debe ser un número positivo.
 - **Ejemplo**:
   ```python
-  cuenta = Cuenta(10000.0)
+  cuenta = Cuenta(deposito_inicial=10000.0)
   ```
+
+---
 
 #### `depositar(self, monto: float) -> None`
-- **Descripción**: Agrega un monto al saldo actual de la cuenta.
-- **Validación**: El `monto` debe ser un valor numérico positivo.
-- **Ejemplo**:
-  ```python
-  cuenta.depositar(5000.0)
-  ```
+- **Descripción**: Añade fondos a la cuenta.
+- **Validaciones**:
+  - `monto` debe ser un número positivo.
+- **Efectos secundarios**:
+  - Aumenta el `saldo` en `monto`.
+  - Registra una transacción de tipo `"deposito"` en `transacciones`.
+
+---
 
 #### `retirar(self, monto: float) -> None`
-- **Descripción**: Resta un monto del saldo actual, siempre que el saldo no se vuelva negativo.
-- **Validación**: El `monto` debe ser positivo y no mayor que el `saldo_actual`.
-- **Ejemplo**:
-  ```python
-  cuenta.retirar(2000.0)
-  ```
-
-#### `comprar_acciones(self, simbolo: str, cantidad: int) -> None`
-- **Descripción**: Permite al usuario comprar acciones de un símbolo específico, verificando que el monto total (precio * cantidad) sea cubierto por el `saldo_actual`.
-- **Validación**: 
-  - `simbolo` debe ser una cadena no vacía.
-  - `cantidad` debe ser un entero positivo.
-  - El precio de las acciones multiplicado por `cantidad` no debe exceder el `saldo_actual`.
-- **Ejemplo**:
-  ```python
-  cuenta.comprar_acciones('AAPL', 10)
-  ```
-
-#### `vender_acciones(self, simbolo: str, cantidad: int) -> None`
-- **Descripción**: Permite al usuario vender acciones de un símbolo específico, verificando que posea la cantidad solicitada.
-- **Validación**: 
-  - `simbolo` debe ser una cadena no vacía.
-  - `cantidad` debe ser un entero positivo.
-  - El usuario debe poseer al menos `cantidad` de acciones del símbolo.
-- **Ejemplo**:
-  ```python
-  cuenta.vender_acciones('AAPL', 5)
-  ```
-
-#### `calcular_valor_total(self) -> float`
-- **Descripción**: Calcula el valor total del portafolio del usuario basado en los precios actuales de las acciones.
-- **Ejemplo**:
-  ```python
-  valor_total = cuenta.calcular_valor_total()
-  ```
-
-#### `calcular_ganancias_perdidas(self) -> float`
-- **Descripción**: Calcula las ganancias o pérdidas del usuario comparando el valor total del portafolio con el `saldo_inicial`.
-- **Ejemplo**:
-  ```python
-  ganancias = cuenta.calcular_ganancias_perdidas()
-  ```
-
-#### `get_tenencias(self) -> dict[str, int]`
-- **Descripción**: Retorna una copia del portafolio actual del usuario.
-- **Ejemplo**:
-  ```python
-  tenencias = cuenta.get_tenencias()
-  ```
-
-#### `listar_transacciones(self) -> list[dict]`
-- **Descripción**: Retorna una lista de todas las transacciones realizadas por el usuario.
-- **Ejemplo**:
-  ```python
-  transacciones = cuenta.listar_transacciones()
-  ```
+- **Descripción**: Retira fondos de la cuenta.
+- **Validaciones**:
+  - `monto` debe ser un número positivo.
+  - El `saldo` no puede ser menor a cero después de la operación.
+- **Efectos secundarios**:
+  - Disminuye el `saldo` en `monto`.
+  - Registra una transacción de tipo `"retiro"` en `transacciones`.
 
 ---
 
-## Función `get_share_price(symbol: str) -> float`
-- **Descripción**: Retorna el precio actual de una acción de un símbolo específico. 
-- **Implementación de prueba**: Devuelve precios fijos para los símbolos `AAPL`, `TSLA`, y `GOOGL`. Para otros símbolos, devuelve `0.0`.
-- **Ejemplo**:
-  ```python
-  precio = get_share_price('AAPL')  # Devuelve 150.0
-  ```
+#### `comprar(self, simbolo: str, cantidad: int) -> None`
+- **Descripción**: Compra una cantidad específica de acciones de un símbolo.
+- **Validaciones**:
+  - `simbolo` debe ser una cadena no vacía.
+  - `cantidad` debe ser un entero positivo.
+  - El costo total (`cantidad * get_share_price(simbolo)`) no puede exceder el `saldo`.
+- **Efectos secundarios**:
+  - Disminuye el `saldo` en el costo total de la compra.
+  - Aumenta la cantidad en `portafolio` para el `simbolo`.
+  - Registra una transacción de tipo `"compra"` en `transacciones`.
 
 ---
 
-## Estructura del módulo
+#### `vender(self, simbolo: str, cantidad: int) -> None`
+- **Descripción**: Vende una cantidad específica de acciones de un símbolo.
+- **Validaciones**:
+  - `simbolo` debe ser una cadena no vacía.
+  - `cantidad` debe ser un entero positivo.
+  - El usuario debe poseer al menos `cantidad` de acciones del `simbolo`.
+- **Efectos secundarios**:
+  - Aumenta el `saldo` en el valor de la venta (`cantidad * get_share_price(simbolo)`).
+  - Disminuye la cantidad en `portafolio` para el `simbolo`.
+  - Registra una transacción de tipo `"venta"` en `transacciones`.
 
+---
+
+#### `valor_total_portafolio(self) -> float`
+- **Descripción**: Calcula el valor total del portafolio actual.
+- **Lógica**:
+  - Suma el valor de todas las acciones en `portafolio` usando `get_share_price(simbolo)`.
+- **Retorno**:
+  - Valor total del portafolio como `float`.
+
+---
+
+#### `ganancias_o_perdidas(self) -> float`
+- **Descripción**: Calcula las ganancias o pérdidas respecto al depósito inicial.
+- **Lógica**:
+  - `valor_total_portafolio()` - `deposito_inicial`.
+- **Retorno**:
+  - Valor de ganancias o pérdidas como `float`.
+
+---
+
+#### `obtener_tenencias(self) -> Dict[str, int]`
+- **Descripción**: Devuelve el estado actual del portafolio.
+- **Retorno**:
+  - Copia del diccionario `portafolio`.
+
+---
+
+#### `obtener_transacciones(self) -> List[Dict[str, Any]]`
+- **Descripción**: Devuelve una lista de todas las transacciones realizadas.
+- **Retorno**:
+  - Copia de la lista `transacciones`.
+
+---
+
+## Función Auxiliar: `get_share_price(symbol: str) -> float`
+
+### Descripción
+- **Función de prueba** que devuelve precios fijos para los símbolos `AAPL`, `TSLA` y `GOOGL`.
+- **Implementación de prueba**:
+  ```python
+  def get_share_price(symbol: str) -> float:
+      precios_prueba = {
+          "AAPL": 190.0,
+          "TSLA": 260.0,
+          "GOOGL": 135.0
+      }
+      return precios_prueba.get(symbol, 0.0)
+  ```
+
+### Uso
+- La función se usa en métodos como `comprar()` y `vender()` para determinar el precio actual de las acciones.
+
+---
+
+## Ejemplo de Uso
 ```python
-# cuentas.py
+from cuentas import Cuenta, get_share_price
 
-def get_share_price(symbol: str) -> float:
-    test_prices = {
-        'AAPL': 150.0,
-        'TSLA': 250.0,
-        'GOOGL': 130.0
-    }
-    return test_prices.get(symbol, 0.0)
-
-class Cuenta:
-    def __init__(self, saldo_inicial: float):
-        # Inicializa los atributos
-        pass
-
-    def depositar(self, monto: float) -> None:
-        # Lógica para depositar
-        pass
-
-    def retirar(self, monto: float) -> None:
-        # Lógica para retirar
-        pass
-
-    def comprar_acciones(self, simbolo: str, cantidad: int) -> None:
-        # Lógica para comprar
-        pass
-
-    def vender_acciones(self, simbolo: str, cantidad: int) -> None:
-        # Lógica para vender
-        pass
-
-    def calcular_valor_total(self) -> float:
-        # Cálculo del valor total
-        pass
-
-    def calcular_ganancias_perdidas(self) -> float:
-        # Cálculo de ganancias o pérdidas
-        pass
-
-    def get_tenencias(self) -> dict[str, int]:
-        # Retorna el portafolio
-        pass
-
-    def listar_transacciones(self) -> list[dict]:
-        # Retorna las transacciones
-        pass
+cuenta = Cuenta(deposito_inicial=10000.0)
+cuenta.comprar("AAPL", 50)  # Compra 50 acciones de AAPL
+print(cuenta.valor_total_portafolio())  # Calcula el valor total del portafolio
+print(cuenta.ganancias_o_perdidas())  # Calcula ganancias o pérdidas
+print(cuenta.obtener_tenencias())  # Muestra las tenencias actuales
+print(cuenta.obtener_transacciones())  # Muestra todas las transacciones
 ```
 
 ---
 
 ## Notas
-- El módulo es autónomo y puede ser probado directamente.
-- El método `get_share_price` es utilizado internamente por `comprar_acciones` y `vender_acciones` para obtener precios de acciones.
-- La validación de entradas (ej. tipos incorrectos, valores negativos) se deja como responsabilidad del desarrollador, pero debe implementarse en la lógica de los métodos.
+- El módulo es completamente autónomo y no depende de otros módulos externos.
+- Las validaciones garantizan que no se permitan operaciones ilegales (ej: vender acciones que no se poseen).

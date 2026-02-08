@@ -14,15 +14,16 @@ design_task:
 
 code_task:
   description: >
-    Escribe un módulo Python que implemente el diseño descrito por el líder de
-    ingeniería, con el fin de cumplir con los requisitos especificados.
+    Escribe un módulo Python que implemente el diseño descrito por 
+    el líder de ingeniería, con el fin de cumplir con los 
+    requisitos especificados.
     Aquí están los requisitos: {requirements}
   expected_output: >
     Un módulo de Python que implemente el diseño y cumpla los requisitos.
     IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown,
     delimitadores de bloque de código ni comillas invertidas.
-    La salida debe ser código Python válido que pueda guardarse directamente
-    en un archivo y ejecutarse.
+    La salida debe ser SOLAMENTE código Python válido que pueda guardarse 
+    directamente en un archivo y ejecutarse.
   agent: backend_engineer
   context:
     - design_task
@@ -55,10 +56,11 @@ test_task:
   expected_output: >
     Un módulo test_{module_name} que pruebe el módulo backend dado, que estará en
     el mismo directorio.
-    IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown, delimitadores
-    de bloque de código ni comillas invertidas. NO ejecutes los tests
+    IMPORTANTE: genera SOLO el código Python sin ningún formato markdown, delimitadores
+    de bloque de código ni comillas invertidas. 
     La salida debe ser código Python válido que pueda guardarse directamente en
     un archivo y ejecutarse.
+    Finalmente, EJECUTA los tests de test_{module_name}.
   agent: test_engineer
   context:
     - code_task
