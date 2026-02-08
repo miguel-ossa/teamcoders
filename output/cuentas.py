@@ -1,130 +1,100 @@
-import uuid
-import time
-from copy import deepcopy
-
-
-def get_share_pryce(symbol: str) -> float:
-    """Devuelve el precio simulado de una acción según su símbolo."""
-    precios_fijos = {
-        "AAPL": 150.0,
-        "TSLA": 250.0,
-        "GOOGL": 140.0
+```python
+def get_share_price(symbol: str) -> float:
+    test_prices = {
+        'AAPL': 150.0,
+        'TSLA': 250.0,
+        'GOOGL': 130.0
     }
-    symbol_upper = symbol.upper()
-    if symbol_upper in precios_fijos:
-        return precios_fijos[symbol_upper]
-    raise ValueError("Símbolo no soportado")
-
+    return test_prices.get(symbol, 0.0)
 
 class Cuenta:
-    def __init__(self) -> None:
-        self.id_cuenta = str(uuid.uuid4())
-        self.saldo = 0.0
-        self.deposito_inicial = 0.0
-        self.acciones = {}
-        self.historial = []
+    def __init__(self, saldo_inicial: float):
+        if not isinstance(saldo_inicial, (int, float)) or saldo_inicial <= 0:
+            raise ValueError("Saldo inicial debe ser un número positivo")
+        self.saldo_inicial = float(saldo_inicial)
+        self.saldo_actual = float(saldo_inicial)
+        self.portafolio = {}
+        self.transacciones = []
 
-    def depositar(self, monto: float) -> float:
-        if monto <= 0:
-            raise ValueError("El monto debe ser mayor que cero.")
-        
-        self.saldo += monto
-        if self.deposito_inicial == 0:
-            self.deposito_inicial = monto
-        
-        self._registrar_transaccion("DEPOSITO", {"monto": monto, "nuevo_saldo": self.saldo})
-        return self.saldo
+    def depositar(self, monto: float) -> None:
+        if not isinstance(monto, (int, float)) or monto <= 0:
+            raise ValueError("Monto debe ser un número positivo")
+        self.saldo_actual += monto
+        self.transacciones.append({
+            'tipo': 'depósito',
+            'monto': monto,
+            'saldo_actual': self.saldo_actual
+        })
 
-    def retirar(self, monto: float) -> float:
-        if monto <= 0:
-            raise ValueError("El monto debe ser mayor que cero.")
-        if self.saldo - monto < 0:
-            raise ValueError("Fondos insuficientes para realizar el retiro.")
-        
-        self.saldo -= monto
-        self._registrar_transaccion("RETIRO", {"monto": monto, "nuevo_saldo": self.saldo})
-        return self.saldo
+    def retirar(self, monto: float) -> None:
+        if not isinstance(monto, (int, float)) or monto <= 0:
+            raise ValueError("Monto debe ser un número positivo")
+        if self.saldo_actual - monto < 0:
+            raise ValueError("No se puede retirar fondos que dejen el saldo negativo")
+        self.saldo_actual -= monto
+        self.transacciones.append({
+            'tipo': 'retiro',
+            'monto': monto,
+            'saldo_actual': self.saldo_actual
+        })
 
-    def comprar_accion(self, simbolo: str, cantidad: int) -> dict:
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor que cero.")
-        if not isinstance(simbolo, str) or not simbolo.strip():
-            raise ValueError("El símbolo debe ser una cadena no vacía.")
-        
-        try:
-            precio_unitario = get_share_pryce(simbolo)
-        except ValueError:
-            raise
-        
-        costo_total = precio_unitario * cantidad
-        if self.saldo < costo_total:
-            raise ValueError("Fondos insuficientes para completar la compra.")
-        
-        self.saldo -= costo_total
-        if simbolo in self.acciones:
-            self.acciones[simbolo] += cantidad
+    def comprar_acciones(self, simbolo: str, cantidad: int) -> None:
+        if not isinstance(simbolo, str) or len(simbolo) == 0:
+            raise ValueError("Símbolo de acción no puede estar vacío")
+        if not isinstance(cantidad, int) or cantidad <= 0:
+            raise ValueError("Cantidad debe ser un entero positivo")
+        precio = get_share_price(simbolo)
+        costo_total = precio * cantidad
+        if self.saldo_actual < costo_total:
+            raise ValueError("Fondos insuficientes para comprar las acciones")
+        self.saldo_actual -= costo_total
+        if simbolo in self.portafolio:
+            self.portafolio[simbolo] += cantidad
         else:
-            self.acciones[simbolo] = cantidad
-        
-        detalle = {
-            "simbolo": simbolo,
-            "cantidad": cantidad,
-            "precio_unitario": precio_unitario,
-            "costo_total": costo_total,
-            "nuevo_saldo": self.saldo
-        }
-        self._registrar_transaccion("COMPRA", detalle)
-        
-        return detalle
+            self.portafolio[simbolo] = cantidad
+        self.transacciones.append({
+            'tipo': 'compra',
+            'simbolo': simbolo,
+            'cantidad': cantidad,
+            'precio': precio,
+            'saldo_actual': self.saldo_actual
+        })
 
-    def vender_accion(self, simbolo: str, cantidad: int) -> dict:
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor que cero.")
-        if simbolo not in self.acciones:
-            raise ValueError(f"No posee acciones de {simbolo}.")
-        if self.acciones[simbolo] < cantidad:
-            raise ValueError("Cantidad insuficiente de acciones para vender.")
-        
-        try:
-            precio_unitario = get_share_pryce(simbolo)
-        except ValueError:
-            raise
-        
-        ingreso_total = precio_unitario * cantidad
-        self.saldo += ingreso_total
-        self.acciones[simbolo] -= cantidad
-        
-        if self.acciones[simbolo] == 0:
-            del self.acciones[simbolo]
-        
-        detalle = {
-            "simbolo": simbolo,
-            "cantidad": cantidad,
-            "precio_unitario": precio_unitario,
-            "ingreso_total": ingreso_total,
-            "nuevo_saldo": self.saldo
-        }
-        self._registrar_transaccion("VENTA", detalle)
-        
-        return detalle
+    def vender_acciones(self, simbolo: str, cantidad: int) -> None:
+        if not isinstance(simbolo, str) or len(simbolo) == 0:
+            raise ValueError("Símbolo de acción no puede estar vacío")
+        if not isinstance(cantidad, int) or cantidad <= 0:
+            raise ValueError("Cantidad debe ser un entero positivo")
+        if simbolo not in self.portafolio or self.portafolio[simbolo] < cantidad:
+            raise ValueError("No se poseen suficientes acciones para vender")
+        precio = get_share_price(simbolo)
+        ganancia = precio * cantidad
+        self.saldo_actual += ganancia
+        self.portafolio[simbolo] -= cantidad
+        if self.portafolio[simbolo] == 0:
+            del self.portafolio[simbolo]
+        self.transacciones.append({
+            'tipo': 'venta',
+            'simbolo': simbolo,
+            'cantidad': cantidad,
+            'precio': precio,
+            'saldo_actual': self.saldo_actual
+        })
 
-    def valor_portafolio(self) -> float:
-        valor_acciones = sum(get_share_pryce(s) * q for s, q in self.acciones.items())
-        return self.saldo + valor_acciones
+    def calcular_valor_total(self) -> float:
+        valor_total = 0.0
+        for simbolo, cantidad in self.portafolio.items():
+            precio = get_share_price(simbolo)
+            valor_total += precio * cantidad
+        return valor_total
 
-    def ganancia_perdida(self) -> float:
-        return self.valor_portafolio() - self.deposito_inicial
+    def calcular_ganancias_perdidas(self) -> float:
+        valor_total = self.calcular_valor_total()
+        return valor_total - self.saldo_inicial
 
-    def tenencias(self) -> dict:
-        return deepcopy(self.acciones)
+    def get_tenencias(self) -> dict[str, int]:
+        return self.portafolio.copy()
 
-    def transacciones(self) -> list:
-        return deepcopy(self.historial)
-
-    def _registrar_transaccion(self, tipo: str, detalle: dict) -> None:
-        transaccion = {
-            "tipo": tipo,
-            "timestamp": time.time(),
-            "detalle": detalle
-        }
-        self.historial.append(transaccion)
+    def listar_transacciones(self) -> list[dict]:
+        return self.transacciones.copy()
+```

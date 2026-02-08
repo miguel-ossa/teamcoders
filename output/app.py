@@ -1,420 +1,132 @@
-import os
-import json
-from flask import Flask, request, jsonify, render_template_string
-from cuentas import Cuenta, get_share_pryce
+import gradio as gr
+from cuentas import Cuenta, get_share_price
 
-app = Flask(__name__)
+cuenta = None
 
-# Crear una única instancia de cuenta para el usuario
-cuenta = Cuenta()
-
-# Plantilla HTML para la interfaz
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Trading</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-        }
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .panel {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .panel h2 {
-            color: #34495e;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-            margin-top: 0;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="number"], input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        button.sell {
-            background-color: #e74c3c;
-        }
-        button.sell:hover {
-            background-color: #c0392b;
-        }
-        button.deposit {
-            background-color: #27ae60;
-        }
-        button.deposit:hover {
-            background-color: #219a52;
-        }
-        button.withdraw {
-            background-color: #e67e22;
-        }
-        button.withdraw:hover {
-            background-color: #d35400;
-        }
-        .stats {
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .stat-value {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        .success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .action-btn {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <h1>Simulador de Trading</h1>
-    
-    {% if message %}
-    <div class="{{ message_type }}">{{ message }}</div>
-    {% endif %}
-    
-    <div class="stats">
-        <div class="stat-item">
-            <span>Saldo:</span>
-            <span class="stat-value">${{ "%.2f"|format(saldo) }}</span>
-        </div>
-        <div class="stat-item">
-            <span>Depósito Inicial:</span>
-            <span class="stat-value">${{ "%.2f"|format(deposito_inicial) }}</span>
-        </div>
-        <div class="stat-item">
-            <span>Valor del Portafolio:</span>
-            <span class="stat-value">${{ "%.2f"|format(valor_portafolio) }}</span>
-        </div>
-        <div class="stat-item">
-            <span>Ganancia/Pérdida:</span>
-            <span class="stat-value" style="color: {{ ganancia_perdida_color }}">${{ "%.2f"|format(ganancia_perdida) }}</span>
-        </div>
-    </div>
-    
-    <div class="container">
-        <div class="panel">
-            <h2>Operaciones</h2>
-            
-            <div class="form-group">
-                <label>Depositar fondos</label>
-                <form method="POST" action="/depositar">
-                    <input type="number" name="monto" step="0.01" placeholder="Monto" required>
-                    <button type="submit" class="deposit">Depositar</button>
-                </form>
-            </div>
-            
-            <div class="form-group">
-                <label>Retirar fondos</label>
-                <form method="POST" action="/retirar">
-                    <input type="number" name="monto" step="0.01" placeholder="Monto" required>
-                    <button type="submit" class="withdraw">Retirar</button>
-                </form>
-            </div>
-            
-            <h3>Comprar Venta de Acciones</h3>
-            
-            <div class="form-group">
-                <label>Comprar acciones</label>
-                <form method="POST" action="/comprar">
-                    <input type="text" name="simbolo" placeholder="Símbolo (AAPL, TSLA, GOOGL)" required>
-                    <input type="number" name="cantidad" min="1" placeholder="Cantidad" required>
-                    <button type="submit" class="buy">Comprar</button>
-                </form>
-            </div>
-            
-            <div class="form-group">
-                <label>Vender acciones</label>
-                <form method="POST" action="/vender">
-                    <input type="text" name="simbolo" placeholder="Símbolo (AAPL, TSLA, GOOGL)" required>
-                    <input type="number" name="cantidad" min="1" placeholder="Cantidad" required>
-                    <button type="submit" class="sell">Vender</button>
-                </form>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <h2>Información de la Cuenta</h2>
-            
-            <div class="form-group">
-                <h3>Tenencias Actuales</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Símbolo</th>
-                            <th>Cantidad</th>
-                            <th>Precio</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for simbolo, cantidad in tenencias.items() %}
-                        <tr>
-                            <td>{{ simbolo }}</td>
-                            <td>{{ cantidad }}</td>
-                            <td>${{ "%.2f"|format(get_share_pryce(simbolo)) }}</td>
-                            <td>${{ "%.2f"|format(get_share_pryce(simbolo) * cantidad) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4">No posee acciones</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div class="panel">
-        <h2>Historial de Transacciones</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Detalles</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaccion in transacciones %}
-                <tr>
-                    <td>{{ transaccion.timestamp | strftime }}</td>
-                    <td>{{ transaccion.tipo }}</td>
-                    <td>
-                        {% if transaccion.tipo == "DEPOSITO" %}
-                        Depósito: ${{ "%.2f"|format(transaccion.detalle.monto) }}
-                        {% elif transaccion.tipo == "RETIRO" %}
-                        Retiro: ${{ "%.2f"|format(transaccion.detalle.monto) }}
-                        {% elif transaccion.tipo == "COMPRA" %}
-                        Compra: {{ transaccion.detalle.cantidad }} x {{ transaccion.detalle.simbolo }} @ ${{ "%.2f"|format(transaccion.detalle.precio_unitario) }} = ${{ "%.2f"|format(transaccion.detalle.costo_total) }}
-                        {% elif transaccion.tipo == "VENTA" %}
-                        Venta: {{ transaccion.detalle.cantidad }} x {{ transaccion.detalle.simbolo }} @ ${{ "%.2f"|format(transaccion.detalle.precio_unitario) }} = ${{ "%.2f"|format(transaccion.detalle.ingreso_total) }}
-                        {% else %}
-                        {{ transaccion.detalle }}
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3">No hay transacciones aún</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>
-'''
-
-@app.template_filter('strftime')
-def strftime_filter(timestamp):
-    """Formatear timestamp a fecha legible."""
-    import datetime
-    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
-@app.route('/')
-def index():
-    """Mostrar la página principal con la información de la cuenta."""
+def create_account(initial_balance: float) -> str:
+    global cuenta
+    if cuenta is not None:
+        return "Cuenta ya existe. Use depositar o retirar."
     try:
-        saldo = cuenta.saldo
-        deposito_inicial = cuenta.deposito_inicial
-        valor_portafolio = cuenta.valor_portafolio()
-        ganancia_perdida = cuenta.ganancia_perdida()
-        tenencias = cuenta.tenencias()
-        transacciones = cuenta.transacciones()
-        
-        # Determinar color para ganancia/pérdida
-        if ganancia_perdida > 0:
-            ganancia_perdida_color = "green"
-        elif ganancia_perdida < 0:
-            ganancia_perdida_color = "red"
-        else:
-            ganancia_perdida_color = "black"
-        
-        return render_template_string(
-            HTML_TEMPLATE,
-            saldo=saldo,
-            deposito_inicial=deposito_inicial,
-            valor_portafolio=valor_portafolio,
-            ganancia_perdida=ganancia_perdida,
-            ganancia_perdida_color=ganancia_perdida_color,
-            tenencias=tenencias,
-            transacciones=transacciones,
-            message=None,
-            message_type=None
-        )
-    except Exception as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     message=f"Error: {str(e)}",
-                                     message_type="error",
-                                     saldo=0,
-                                     deposito_inicial=0,
-                                     valor_portafolio=0,
-                                     ganancia_perdida=0,
-                                     ganancia_perdida_color="black",
-                                     tenencias={},
-                                     transacciones=[])
+        cuenta = Cuenta(initial_balance)
+        return f"Cuenta creada con saldo inicial: {initial_balance}"
+    except ValueError as e:
+        return str(e)
 
-@app.route('/depositar', methods=['POST'])
-def depositar():
-    """Procesar un depósito."""
+def deposit(monto: float) -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
     try:
-        monto = float(request.form['monto'])
         cuenta.depositar(monto)
-        return index()
+        return f"Depósito de {monto} realizado. Saldo actual: {cuenta.saldo_actual}"
     except ValueError as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     message=str(e),
-                                     message_type="error",
-                                     saldo=cuenta.saldo,
-                                     deposito_inicial=cuenta.deposito_inicial,
-                                     valor_portafolio=cuenta.valor_portafolio(),
-                                     ganancia_perdida=cuenta.ganancia_perdida(),
-                                     ganancia_perdida_color="black" if cuenta.ganancia_perdida() == 0 else ("green" if cuenta.ganancia_perdida() > 0 else "red"),
-                                     tenencias=cuenta.tenencias(),
-                                     transacciones=cuenta.transacciones())
+        return str(e)
 
-@app.route('/retirar', methods=['POST'])
-def retirar():
-    """Procesar un retiro."""
+def withdraw(monto: float) -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
     try:
-        monto = float(request.form['monto'])
         cuenta.retirar(monto)
-        return index()
+        return f"Retiro de {monto} realizado. Saldo actual: {cuenta.saldo_actual}"
     except ValueError as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     message=str(e),
-                                     message_type="error",
-                                     saldo=cuenta.saldo,
-                                     deposito_inicial=cuenta.deposito_inicial,
-                                     valor_portafolio=cuenta.valor_portafolio(),
-                                     ganancia_perdida=cuenta.ganancia_perdida(),
-                                     ganancia_perdida_color="black" if cuenta.ganancia_perdida() == 0 else ("green" if cuenta.ganancia_perdida() > 0 else "red"),
-                                     tenencias=cuenta.tenencias(),
-                                     transacciones=cuenta.transacciones())
+        return str(e)
 
-@app.route('/comprar', methods=['POST'])
-def comprar():
-    """Procesar una compra de acciones."""
+def buy_stock(symbol: str, quantity: int) -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
     try:
-        simbolo = request.form['simbolo'].upper()
-        cantidad = int(request.form['cantidad'])
-        cuenta.comprar_accion(simbolo, cantidad)
-        return index()
+        cuenta.comprar_acciones(symbol, quantity)
+        return f"Compra de {quantity} acciones de {symbol} realizada. Saldo actual: {cuenta.saldo_actual}"
     except ValueError as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     message=str(e),
-                                     message_type="error",
-                                     saldo=cuenta.saldo,
-                                     deposito_inicial=cuenta.deposito_inicial,
-                                     valor_portafolio=cuenta.valor_portafolio(),
-                                     ganancia_perdida=cuenta.ganancia_perdida(),
-                                     ganancia_perdida_color="black" if cuenta.ganancia_perdida() == 0 else ("green" if cuenta.ganancia_perdida() > 0 else "red"),
-                                     tenencias=cuenta.tenencias(),
-                                     transacciones=cuenta.transacciones())
+        return str(e)
 
-@app.route('/vender', methods=['POST'])
-def vender():
-    """Procesar una venta de acciones."""
+def sell_stock(symbol: str, quantity: int) -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
     try:
-        simbolo = request.form['simbolo'].upper()
-        cantidad = int(request.form['cantidad'])
-        cuenta.vender_accion(simbolo, cantidad)
-        return index()
+        cuenta.vender_acciones(symbol, quantity)
+        return f"Venta de {quantity} acciones de {symbol} realizada. Saldo actual: {cuenta.saldo_actual}"
     except ValueError as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     message=str(e),
-                                     message_type="error",
-                                     saldo=cuenta.saldo,
-                                     deposito_inicial=cuenta.deposito_inicial,
-                                     valor_portafolio=cuenta.valor_portafolio(),
-                                     ganancia_perdida=cuenta.ganancia_perdida(),
-                                     ganancia_perdida_color="black" if cuenta.ganancia_perdida() == 0 else ("green" if cuenta.ganancia_perdida() > 0 else "red"),
-                                     tenencias=cuenta.tenencias(),
-                                     transacciones=cuenta.transacciones())
+        return str(e)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+def get_portfolio() -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
+    portafolio = cuenta.get_tenencias()
+    if not portafolio:
+        return "No hay tenencias."
+    return "\n".join([f"{symbol}: {quantity} acciones" for symbol, quantity in portafolio.items()])
+
+def get_gains() -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
+    gains = cuenta.calcular_ganancias_perdidas()
+    return f"Ganancias o pérdidas: {gains:.2f}"
+
+def list_transactions() -> str:
+    global cuenta
+    if cuenta is None:
+        return "Cuenta no creada. Use crear cuenta primero."
+    transactions = cuenta.listar_transacciones()
+    if not transactions:
+        return "No hay transacciones."
+    return "\n".join([f"{t['tipo']}: {t['monto']} - Saldo: {t['saldo_actual']}" for t in transactions])
+
+demo = gr.Blocks()
+
+with demo:
+    gr.Markdown("### Gestión de Cuentas de Trading")
+    with gr.Tab("Crear Cuenta"):
+        initial_balance = gr.Number(label="Saldo Inicial")
+        create_btn = gr.Button("Crear Cuenta")
+        create_output = gr.Textbox(label="Resultado")
+        create_btn.click(fn=create_account, inputs=initial_balance, outputs=create_output)
+
+    with gr.Tab("Depositar"):
+        deposit_monto = gr.Number(label="Monto a Depositar")
+        deposit_btn = gr.Button("Depositar")
+        deposit_output = gr.Textbox(label="Resultado")
+        deposit_btn.click(fn=deposit, inputs=deposit_monto, outputs=deposit_output)
+
+    with gr.Tab("Retirar"):
+        withdraw_monto = gr.Number(label="Monto a Retirar")
+        withdraw_btn = gr.Button("Retirar")
+        withdraw_output = gr.Textbox(label="Resultado")
+        withdraw_btn.click(fn=withdraw, inputs=withdraw_monto, outputs=withdraw_output)
+
+    with gr.Tab("Comprar Acciones"):
+        symbol = gr.Textbox(label="Símbolo de Acción (ej: AAPL)")
+        quantity = gr.Number(label="Cantidad")
+        buy_btn = gr.Button("Comprar")
+        buy_output = gr.Textbox(label="Resultado")
+        buy_btn.click(fn=buy_stock, inputs=[symbol, quantity], outputs=buy_output)
+
+    with gr.Tab("Vender Acciones"):
+        symbol = gr.Textbox(label="Símbolo de Acción (ej: AAPL)")
+        quantity = gr.Number(label="Cantidad")
+        sell_btn = gr.Button("Vender")
+        sell_output = gr.Textbox(label="Resultado")
+        sell_btn.click(fn=sell_stock, inputs=[symbol, quantity], outputs=sell_output)
+
+    with gr.Tab("Ver Tenencias"):
+        portfolio_btn = gr.Button("Ver Tenencias")
+        portfolio_output = gr.Textbox(label="Tenencias")
+        portfolio_btn.click(fn=get_portfolio, inputs=[], outputs=portfolio_output)
+
+    with gr.Tab("Ver Ganancias/Pérdidas"):
+        gains_btn = gr.Button("Ver Ganancias")
+        gains_output = gr.Textbox(label="Ganancias/Pérdidas")
+        gains_btn.click(fn=get_gains, inputs=[], outputs=gains_output)
+
+    with gr.Tab("Lista de Transacciones"):
+        transactions_btn = gr.Button("Ver Transacciones")
+        transactions_output = gr.Textbox(label="Transacciones")
+        transactions_btn.click(fn=list_transactions, inputs=[], outputs=transactions_output)
+
+demo.launch()

@@ -30,13 +30,13 @@ code_task:
 
 frontend_task:
   description: >
-    Escribe una interfaz con Flask en un módulo llamado app.py que demuestre
+    Escribe una interfaz con Gradio en un módulo llamado app.py que demuestre
     la clase backend dada en {module_name}.
     Supón que hay un solo usuario y mantén la interfaz muy simple, solo con un
     prototipo o demostración.
     Aquí están los requisitos: {requirements}
   expected_output: >
-    Una interfaz con Flask en el módulo app.py que demuestre la clase backend dada.
+    Una interfaz con Gradio en el módulo app.py que demuestre la clase backend dada.
     El archivo debe estar listo para ejecutarse tal cual, en el mismo directorio
     que el módulo backend, e importar la clase backend desde {module_name}.
     IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown,
