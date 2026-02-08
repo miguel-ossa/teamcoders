@@ -56,11 +56,10 @@ test_task:
   expected_output: >
     Un módulo test_{module_name} que pruebe el módulo backend dado, que estará en
     el mismo directorio.
-    IMPORTANTE: genera SOLO el código Python sin ningún formato markdown, delimitadores
-    de bloque de código ni comillas invertidas. 
+    IMPORTANTE: genera el código Python sin ningún formato markdown, delimitadores
+    de bloque de código ni comillas invertidas. Una vez generado, ejecuta los tests.
     La salida debe ser código Python válido que pueda guardarse directamente en
     un archivo y ejecutarse.
-    Finalmente, EJECUTA los tests de test_{module_name}.
   agent: test_engineer
   context:
     - code_task

@@ -1,94 +1,98 @@
-```python
-def get_share_price(symbol: str) -> float:
-    precios_prueba = {
-        "AAPL": 190.0,
-        "TSLA": 260.0,
-        "GOOGL": 135.0
-    }
-    return precios_prueba.get(symbol, 0.0)
+import datetime
+
+def get_share_price(symbol):
+    if symbol == 'AAPL':
+        return 150.0
+    elif symbol == 'TSLA':
+        return 250.0
+    elif symbol == 'GOOGL':
+        return 130.0
+    else:
+        raise ValueError("Symbol not found")
 
 class Cuenta:
-    def __init__(self, deposito_inicial: float):
-        if deposito_inicial <= 0:
-            raise ValueError("Depósito inicial debe ser positivo.")
-        self.saldo = deposito_inicial
-        self.portafolio = {}
-        self.deposito_inicial = deposito_inicial
-        self.transacciones = []
+    def __init__(self, initial_deposit: float):
+        if initial_deposit <= 0:
+            raise ValueError("Initial deposit must be positive")
+        self.balance = initial_deposit
+        self.initial_deposit = initial_deposit
+        self.holdings = {}
+        self.transactions = []
 
-    def depositar(self, monto: float) -> None:
-        if monto <= 0:
-            raise ValueError("Monto debe ser positivo.")
-        self.saldo += monto
-        self.transacciones.append({
-            'tipo': 'deposito',
-            'monto': monto
-        })
+    def deposit(self, amount: float):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += amount
+        self._record_transaction("deposit", amount=amount)
 
-    def retirar(self, monto: float) -> None:
-        if monto <= 0:
-            raise ValueError("Monto debe ser positivo.")
-        if self.saldo - monto < 0:
-            raise ValueError("No se puede retirar fondos que dejen el saldo negativo.")
-        self.saldo -= monto
-        self.transacciones.append({
-            'tipo': 'retiro',
-            'monto': monto
-        })
+    def withdraw(self, amount: float):
+        if amount <= 0:
+            raise ValueError("Withdraw amount must be positive")
+        if self.balance - amount < 0:
+            raise ValueError("Cannot withdraw, insufficient balance")
+        self.balance -= amount
+        self._record_transaction("withdraw", amount=amount)
 
-    def comprar(self, simbolo: str, cantidad: int) -> None:
-        if not simbolo or not isinstance(simbolo, str):
-            raise ValueError("Símbolo no puede estar vacío.")
-        if cantidad <= 0:
-            raise ValueError("Cantidad debe ser positiva.")
-        precio = get_share_price(simbolo)
-        total_costo = cantidad * precio
-        if self.saldo < total_costo:
-            raise ValueError("No tiene suficiente saldo para comprar.")
-        self.saldo -= total_costo
-        if simbolo in self.portafolio:
-            self.portafolio[simbolo] += cantidad
+    def buy_stock(self, symbol: str, quantity: int):
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive")
+        price = get_share_price(symbol)
+        total_cost = price * quantity
+        if self.balance < total_cost:
+            raise ValueError("Insufficient funds to buy")
+        self.balance -= total_cost
+        if symbol in self.holdings:
+            self.holdings[symbol]['quantity'] += quantity
+            self.holdings[symbol]['cost_basis'] += total_cost
         else:
-            self.portafolio[simbolo] = cantidad
-        self.transacciones.append({
-            'tipo': 'compra',
-            'simbolo': simbolo,
-            'cantidad': cantidad,
-            'monto': total_costo
-        })
+            self.holdings[symbol] = {
+                'quantity': quantity,
+                'cost_basis': total_cost
+            }
+        self._record_transaction("buy", symbol=symbol, quantity=quantity, price=price)
 
-    def vender(self, simbolo: str, cantidad: int) -> None:
-        if not simbolo or not isinstance(simbolo, str):
-            raise ValueError("Símbolo no puede estar vacío.")
-        if cantidad <= 0:
-            raise ValueError("Cantidad debe ser positiva.")
-        if simbolo not in self.portafolio or self.portafolio[simbolo] < cantidad:
-            raise ValueError("No posee suficientes acciones para vender.")
-        precio = get_share_price(simbolo)
-        total_venta = cantidad * precio
-        self.saldo += total_venta
-        self.portafolio[simbolo] -= cantidad
-        if self.portafolio[simbolo] == 0:
-            del self.portafolio[simbolo]
-        self.transacciones.append({
-            'tipo': 'venta',
-            'simbolo': simbolo,
-            'cantidad': cantidad,
-            'monto': total_venta
-        })
+    def sell_stock(self, symbol: str, quantity: int):
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive")
+        if symbol not in self.holdings or self.holdings[symbol]['quantity'] < quantity:
+            raise ValueError("Not enough shares to sell")
+        price = get_share_price(symbol)
+        proceeds = price * quantity
+        self.balance += proceeds
+        self.holdings[symbol]['quantity'] -= quantity
+        if self.holdings[symbol]['quantity'] == 0:
+            del self.holdings[symbol]
+        self._record_transaction("sell", symbol=symbol, quantity=quantity, price=price)
 
-    def valor_total_portafolio(self) -> float:
-        total = 0.0
-        for simbolo, cantidad in self.portafolio.items():
-            total += cantidad * get_share_price(simbolo)
-        return total
+    def get_portfolio_value(self) -> float:
+        portfolio_value = self.balance
+        for symbol, data in self.holdings.items():
+            price = get_share_price(symbol)
+            portfolio_value += data['quantity'] * price
+        return portfolio_value
 
-    def ganancias_o_perdidas(self) -> float:
-        return self.valor_total_portafolio() - self.deposito_inicial
+    def get_profit_loss(self) -> float:
+        return self.get_portfolio_value() - self.initial_deposit
 
-    def obtener_tenencias(self) -> dict:
-        return self.portafolio.copy()
+    def get_holdings(self) -> dict:
+        return self.holdings
 
-    def obtener_transacciones(self) -> list:
-        return self.transacciones.copy()
-```
+    def get_transactions(self) -> list:
+        return self.transactions
+
+    def _record_transaction(self, transaction_type: str, **kwargs):
+        timestamp = datetime.datetime.now()
+        transaction = {
+            'type': transaction_type,
+            'timestamp': timestamp,
+            'balance': self.balance
+        }
+        if transaction_type == 'deposit':
+            transaction['quantity'] = kwargs['amount']
+        elif transaction_type == 'withdraw':
+            transaction['quantity'] = kwargs['amount']
+        elif transaction_type in ['buy', 'sell']:
+            transaction['symbol'] = kwargs['symbol']
+            transaction['quantity'] = kwargs['quantity']
+            transaction['price'] = kwargs['price']
+        self.transactions.append(transaction)

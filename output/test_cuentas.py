@@ -1,110 +1,115 @@
-```python
 import unittest
-from cuentas import Cuenta, get_share_price
+from cuentas import Cuenta
 
 class TestCuenta(unittest.TestCase):
-    def test_init_valid_deposit(self):
+    def test_initial_deposit_positive(self):
         cuenta = Cuenta(1000)
-        self.assertEqual(cuenta.saldo, 1000)
-        self.assertEqual(cuenta.portafolio, {})
-        self.assertEqual(cuenta.transacciones, [])
-
-    def test_init_invalid_deposit(self):
+        self.assertEqual(cuenta.balance, 1000)
+        self.assertEqual(cuenta.initial_deposit, 1000)
+    
+    def test_initial_deposit_zero(self):
         with self.assertRaises(ValueError):
             Cuenta(0)
+    
+    def test_initial_deposit_negative(self):
         with self.assertRaises(ValueError):
             Cuenta(-100)
-
-    def test_depositar_valid(self):
+    
+    def test_deposit_positive(self):
         cuenta = Cuenta(1000)
-        cuenta.depositar(500)
-        self.assertEqual(cuenta.saldo, 1500)
-        self.assertEqual(cuenta.transacciones[-1], {'tipo': 'deposito', 'monto': 500})
-
-    def test_depositar_invalid(self):
-        cuenta = Cuenta(1000)
-        with self.assertRaises(ValueError):
-            cuenta.depositar(0)
-        with self.assertRaises(ValueError):
-            cuenta.depositar(-100)
-
-    def test_retirar_valid(self):
-        cuenta = Cuenta(1000)
-        cuenta.retirar(200)
-        self.assertEqual(cuenta.saldo, 800)
-        self.assertEqual(cuenta.transacciones[-1], {'tipo': 'retiro', 'monto': 200})
-
-    def test_retirar_invalid(self):
+        cuenta.deposit(500)
+        self.assertEqual(cuenta.balance, 1500)
+    
+    def test_deposit_zero(self):
         cuenta = Cuenta(1000)
         with self.assertRaises(ValueError):
-            cuenta.retirar(0)
-        with self.assertRaises(ValueError):
-            cuenta.retirar(-100)
-        with self.assertRaises(ValueError):
-            cuenta.retirar(1200)
-
-    def test_comprar_valid(self):
-        cuenta = Cuenta(1000)
-        cuenta.comprar("AAPL", 1)
-        self.assertEqual(cuenta.saldo, 810.0)
-        self.assertEqual(cuenta.portafolio, {"AAPL": 1})
-        self.assertEqual(cuenta.transacciones[-1], {"tipo": "compra", "simbolo": "AAPL", "cantidad": 1, "monto": 190.0})
-
-    def test_comprar_invalid(self):
+            cuenta.deposit(0)
+    
+    def test_deposit_negative(self):
         cuenta = Cuenta(1000)
         with self.assertRaises(ValueError):
-            cuenta.comprar("", 1)
-        with self.assertRaises(ValueError):
-            cuenta.comprar("AAPL", 0)
-        with self.assertRaises(ValueError):
-            cuenta.comprar("AAPL", -1)
-        with self.assertRaises(ValueError):
-            cuenta.comprar("XYZ", 1)
-
-    def test_vender_valid(self):
+            cuenta.deposit(-500)
+    
+    def test_withdraw_positive(self):
         cuenta = Cuenta(1000)
-        cuenta.comprar("AAPL", 1)
-        cuenta.vender("AAPL", 1)
-        self.assertEqual(cuenta.saldo, 1000.0)
-        self.assertEqual(cuenta.portafolio, {})
-        self.assertEqual(cuenta.transacciones[-1], {"tipo": "venta", "simbolo": "AAPL", "cantidad": 1, "monto": 190.0})
-
-    def test_vender_invalid(self):
+        cuenta.withdraw(500)
+        self.assertEqual(cuenta.balance, 500)
+    
+    def test_withdraw_insufficient(self):
         cuenta = Cuenta(1000)
         with self.assertRaises(ValueError):
-            cuenta.vender("", 1)
+            cuenta.withdraw(1500)
+    
+    def test_withdraw_zero(self):
+        cuenta = Cuenta(1000)
         with self.assertRaises(ValueError):
-            cuenta.vender("AAPL", 0)
+            cuenta.withdraw(0)
+    
+    def test_withdraw_negative(self):
+        cuenta = Cuenta(1000)
         with self.assertRaises(ValueError):
-            cuenta.vender("AAPL", -1)
-        cuenta.comprar("AAPL", 1)
+            cuenta.withdraw(-500)
+    
+    def test_buy_stock_valid(self):
+        cuenta = Cuenta(1000)
+        cuenta.buy_stock('AAPL', 2)
+        self.assertEqual(cuenta.balance, 700)
+        self.assertEqual(cuenta.holdings['AAPL']['quantity'], 2)
+        self.assertEqual(cuenta.holdings['AAPL']['cost_basis'], 300)
+    
+    def test_buy_stock_insufficient_funds(self):
+        cuenta = Cuenta(100)
         with self.assertRaises(ValueError):
-            cuenta.vender("AAPL", 2)
-
-    def test_valor_total_portafolio(self):
+            cuenta.buy_stock('AAPL', 2)
+    
+    def test_buy_stock_invalid_symbol(self):
         cuenta = Cuenta(1000)
-        cuenta.comprar("AAPL", 1)
-        cuenta.comprar("TSLA", 1)
-        self.assertEqual(cuenta.valor_total_portafolio(), 450.0)
-
-    def test_ganancias_o_perdidas(self):
+        with self.assertRaises(ValueError):
+            cuenta.buy_stock('XYZ', 1)
+    
+    def test_sell_stock_valid(self):
         cuenta = Cuenta(1000)
-        cuenta.comprar("AAPL", 1)
-        self.assertEqual(cuenta.ganancias_o_perdidas(), -190.0)
-
-    def test_obtener_tenencias(self):
+        cuenta.buy_stock('AAPL', 2)
+        cuenta.sell_stock('AAPL', 1)
+        self.assertEqual(cuenta.balance, 850)
+        self.assertEqual(cuenta.holdings['AAPL']['quantity'], 1)
+        self.assertEqual(cuenta.holdings['AAPL']['cost_basis'], 300)
+    
+    def test_sell_stock_insufficient(self):
         cuenta = Cuenta(1000)
-        cuenta.comprar("AAPL", 1)
-        self.assertEqual(cuenta.obtener_tenencias(), {"AAPL": 1})
-        cuenta.obtener_tenencias()["AAPL"] = 0
-        self.assertEqual(cuenta.portafolio, {"AAPL": 1})
-
-    def test_obtener_transacciones(self):
+        with self.assertRaises(ValueError):
+            cuenta.sell_stock('AAPL', 1)
+    
+    def test_sell_stock_invalid_quantity(self):
         cuenta = Cuenta(1000)
-        cuenta.depositar(500)
-        cuenta.retirar(200)
-        self.assertEqual(cuenta.obtener_transacciones(), [{"tipo": "deposito", "monto": 500}, {"tipo": "retiro", "monto": 200}])
+        with self.assertRaises(ValueError):
+            cuenta.sell_stock('AAPL', 0)
+    
+    def test_get_portfolio_value(self):
+        cuenta = Cuenta(1000)
+        cuenta.buy_stock('AAPL', 2)
+        self.assertEqual(cuenta.get_portfolio_value(), 1000)
+    
+    def test_get_profit_loss(self):
+        cuenta = Cuenta(1000)
+        cuenta.buy_stock('AAPL', 2)
+        self.assertEqual(cuenta.get_profit_loss(), 0)
+    
+    def test_get_holdings(self):
+        cuenta = Cuenta(1000)
+        cuenta.buy_stock('AAPL', 2)
+        self.assertEqual(cuenta.get_holdings(), {'AAPL': {'quantity': 2, 'cost_basis': 300}})
+    
+    def test_get_transactions(self):
+        cuenta = Cuenta(1000)
+        cuenta.deposit(500)
+        cuenta.withdraw(200)
+        cuenta.buy_stock('AAPL', 1)
+        transactions = cuenta.get_transactions()
+        self.assertEqual(len(transactions), 3)
+        self.assertEqual(transactions[0]['type'], 'deposit')
+        self.assertEqual(transactions[1]['type'], 'withdraw')
+        self.assertEqual(transactions[2]['type'], 'buy')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
-```

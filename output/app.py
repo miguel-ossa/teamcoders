@@ -1,96 +1,139 @@
 import gradio as gr
-from cuentas import Cuenta, get_share_price
+from cuentas import Cuenta
 
-cuenta = Cuenta(10000)
-
-def get_balance():
-    return f"Saldo: ${cuenta.saldo:.2f}"
-
-def get_portfolio():
-    if not cuenta.portafolio:
-        return "No hay tenencias."
-    return "\n".join([f"{symbol}: {cantidad} acciones" for symbol, cantidad in cuenta.portafolio.items()])
-
-def get_gains():
-    gains = cuenta.ganancias_o_perdidas()
-    return f"Ganancias/Pérdidas: ${gains:.2f}"
-
-def get_transactions():
-    if not cuenta.transacciones:
-        return "No hay transacciones."
-    return "\n".join([f"{t['tipo']}: {t.get('monto', '')}" for t in cuenta.transacciones])
-
-def depositar(monto):
+def create_account(initial_deposit):
     try:
-        cuenta.depositar(monto)
-        return get_balance(), get_portfolio(), get_gains(), get_transactions()
-    except Exception as e:
-        return str(e), get_portfolio(), get_gains(), get_transactions()
+        account = Cuenta(float(initial_deposit))
+        return "Cuenta creada con depósito inicial de ${:.2f}".format(initial_deposit), account
+    except ValueError as e:
+        return str(e), None
 
-def retirar(monto):
+def deposit(account, amount):
+    if not account:
+        return "Por favor cree una cuenta primero", account
     try:
-        cuenta.retirar(monto)
-        return get_balance(), get_portfolio(), get_gains(), get_transactions()
-    except Exception as e:
-        return str(e), get_portfolio(), get_gains(), get_transactions()
+        account.deposit(float(amount))
+        return "Depósito de ${:.2f} exitoso".format(amount), account
+    except ValueError as e:
+        return str(e), account
 
-def comprar(simbolo, cantidad):
+def withdraw(account, amount):
+    if not account:
+        return "Por favor cree una cuenta primero", account
     try:
-        cuenta.comprar(simbolo, cantidad)
-        return get_balance(), get_portfolio(), get_gains(), get_transactions()
-    except Exception as e:
-        return str(e), get_portfolio(), get_gains(), get_transactions()
+        account.withdraw(float(amount))
+        return "Retiro de ${:.2f} exitoso".format(amount), account
+    except ValueError as e:
+        return str(e), account
 
-def vender(simbolo, cantidad):
+def buy_stock(account, symbol, quantity):
+    if not account:
+        return "Por favor cree una cuenta primero", account
     try:
-        cuenta.vender(simbolo, cantidad)
-        return get_balance(), get_portfolio(), get_gains(), get_transactions()
-    except Exception as e:
-        return str(e), get_portfolio(), get_gains(), get_transactions()
+        account.buy_stock(symbol, int(quantity))
+        return "Compra de {} acciones de {} exitosa".format(quantity, symbol), account
+    except ValueError as e:
+        return str(e), account
 
-def create_account(deposito_inicial):
-    global cuenta
+def sell_stock(account, symbol, quantity):
+    if not account:
+        return "Por favor cree una cuenta primero", account
     try:
-        cuenta = Cuenta(deposito_inicial)
-        return get_balance(), get_portfolio(), get_gains(), get_transactions()
-    except Exception as e:
-        return str(e), get_portfolio(), get_gains(), get_transactions()
+        account.sell_stock(symbol, int(quantity))
+        return "Venta de {} acciones de {} exitosa".format(quantity, symbol), account
+    except ValueError as e:
+        return str(e), account
+
+def get_portfolio_value(account):
+    if not account:
+        return "Por favor cree una cuenta primero"
+    value = account.get_portfolio_value()
+    return "Valor total del portafolio: ${:.2f}".format(value)
+
+def get_profit_loss(account):
+    if not account:
+        return "Por favor cree una cuenta primero"
+    profit = account.get_profit_loss()
+    return "Ganancias/Pérdidas: ${:.2f}".format(profit)
+
+def get_holdings(account):
+    if not account:
+        return "Por favor cree una cuenta primero"
+    holdings = account.get_holdings()
+    if not holdings:
+        return "No posee ninguna acción"
+    result = "Tenencias:\n"
+    for symbol, data in holdings.items():
+        result += "- {}: {} acciones (Costo base: ${:.2f})\n".format(symbol, data['quantity'], data['cost_basis'])
+    return result
+
+def get_transactions(account):
+    if not account:
+        return "Por favor cree una cuenta primero"
+    transactions = account.get_transactions()
+    if not transactions:
+        return "No hay transacciones registradas"
+    result = "Transacciones:\n"
+    for tx in transactions:
+        time_str = tx['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+        if tx['type'] == 'deposit':
+            result += "- {} {}: ${:.2f} (Saldo: ${:.2f})\n".format(tx['type'], tx['quantity'], tx['balance'], tx['balance'])
+        elif tx['type'] == 'withdraw':
+            result += "- {} {}: ${:.2f} (Saldo: ${:.2f})\n".format(tx['type'], tx['quantity'], tx['balance'], tx['balance'])
+        else:
+            result += "- {}: {} acciones de {} a ${:.2f} (Saldo: ${:.2f})\n".format(
+                tx['type'],
+                tx['quantity'],
+                tx['symbol'],
+                tx['price'],
+                tx['balance']
+            )
+    return result
 
 with gr.Blocks() as demo:
-    gr.Markdown("## Gestión de Cuenta de Trading")
+    account_state = gr.State(None)
+    
+    gr.Markdown("### Sistema de Gestión de Cuentas para Simulación de Trading")
     
     with gr.Row():
-        deposito_input = gr.Number(label="Depósito Inicial", value=10000)
-        create_button = gr.Button("Crear Cuenta")
+        initial_deposit = gr.Textbox(label="Depósito Inicial", placeholder="Ejemplo: 10000")
+        create_btn = gr.Button("Crear Cuenta")
     
     with gr.Row():
-        deposito_amount = gr.Number(label="Monto a Depositar")
-        deposit_button = gr.Button("Depositar")
+        deposit_amount = gr.Textbox(label="Monto a Depositar", placeholder="Ejemplo: 500")
+        deposit_btn = gr.Button("Depositar")
     
     with gr.Row():
-        withdraw_amount = gr.Number(label="Monto a Retirar")
-        withdraw_button = gr.Button("Retirar")
+        withdraw_amount = gr.Textbox(label="Monto a Retirar", placeholder="Ejemplo: 200")
+        withdraw_btn = gr.Button("Retirar")
     
     with gr.Row():
-        buy_symbol = gr.Text(label="Símbolo (AAPL, TSLA, GOOGL)")
-        buy_quantity = gr.Number(label="Cantidad a Comprar")
-        buy_button = gr.Button("Comprar")
+        buy_symbol = gr.Textbox(label="Símbolo de Acción", placeholder="Ejemplo: AAPL")
+        buy_quantity = gr.Textbox(label="Cantidad a Comprar", placeholder="Ejemplo: 10")
+        buy_btn = gr.Button("Comprar")
     
     with gr.Row():
-        sell_symbol = gr.Text(label="Símbolo (AAPL, TSLA, GOOGL)")
-        sell_quantity = gr.Number(label="Cantidad a Vender")
-        sell_button = gr.Button("Vender")
+        sell_symbol = gr.Textbox(label="Símbolo de Acción", placeholder="Ejemplo: AAPL")
+        sell_quantity = gr.Textbox(label="Cantidad a Vender", placeholder="Ejemplo: 5")
+        sell_btn = gr.Button("Vender")
     
     with gr.Row():
-        balance_output = gr.Textbox(label="Saldo Actual", interactive=False)
-        portfolio_output = gr.Textbox(label="Tenencias", interactive=False)
-        gains_output = gr.Textbox(label="Ganancias/Pérdidas", interactive=False)
+        portfolio_output = gr.Textbox(label="Valor del Portafolio", interactive=False)
+        profit_output = gr.Textbox(label="Ganancias/Pérdidas", interactive=False)
+    
+    with gr.Row():
+        holdings_output = gr.Textbox(label="Tenencias", interactive=False)
         transactions_output = gr.Textbox(label="Transacciones", interactive=False)
     
-    create_button.click(fn=create_account, inputs=deposito_input, outputs=[balance_output, portfolio_output, gains_output, transactions_output])
-    deposit_button.click(fn=depositar, inputs=deposito_amount, outputs=[balance_output, portfolio_output, gains_output, transactions_output])
-    withdraw_button.click(fn=retirar, inputs=withdraw_amount, outputs=[balance_output, portfolio_output, gains_output, transactions_output])
-    buy_button.click(fn=comprar, inputs=[buy_symbol, buy_quantity], outputs=[balance_output, portfolio_output, gains_output, transactions_output])
-    sell_button.click(fn=vender, inputs=[sell_symbol, sell_quantity], outputs=[balance_output, portfolio_output, gains_output, transactions_output])
+    create_btn.click(fn=create_account, inputs=initial_deposit, outputs=[gr.Textbox(label="Estado"), account_state])
+    deposit_btn.click(fn=deposit, inputs=[account_state, deposit_amount], outputs=[gr.Textbox(label="Estado"), account_state])
+    withdraw_btn.click(fn=withdraw, inputs=[account_state, withdraw_amount], outputs=[gr.Textbox(label="Estado"), account_state])
+    buy_btn.click(fn=buy_stock, inputs=[account_state, buy_symbol, buy_quantity], outputs=[gr.Textbox(label="Estado"), account_state])
+    sell_btn.click(fn=sell_stock, inputs=[account_state, sell_symbol, sell_quantity], outputs=[gr.Textbox(label="Estado"), account_state])
+    
+    portfolio_output.change(fn=get_portfolio_value, inputs=account_state, outputs=portfolio_output)
+    profit_output.change(fn=get_profit_loss, inputs=account_state, outputs=profit_output)
+    holdings_output.change(fn=get_holdings, inputs=account_state, outputs=holdings_output)
+    transactions_output.change(fn=get_transactions, inputs=account_state, outputs=transactions_output)
 
 demo.launch()

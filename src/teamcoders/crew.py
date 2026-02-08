@@ -16,6 +16,20 @@ def task_callback(output):
     # Wait 7 seconds between tasks to stay under 8 RPM limit
     time.sleep(7)
 
+def test_task_callback(output):
+    """Callback to run pytest after test_task finishes."""
+    # Aquí asumes que los outputs ya están en output/
+    # y que module_name está accesible de algún modo
+    # Por ejemplo, si lo pasas vía env o contexto
+    module_name = os.getenv("MODULE_NAME", "mi_modulo")  # o como lo tengas
+    test_file = f"./output/test_{module_name}.py"
+
+    if os.path.exists(test_file):
+        import subprocess
+        subprocess.run(["pytest", test_file], check=True)
+    else:
+        print(f"[WARN] test file not found: {test_file}")
+
 @CrewBase
 class Teamcoders():
     """Teamcoders crew"""
@@ -121,7 +135,7 @@ class Teamcoders():
         return Task(
             config=self.tasks_config['test_task'], # type: ignore[index]
             async_execution=False,
-            callbacks=[task_callback]
+            callbacks=[task_callback, test_task_callback],
         )
 
     @crew
