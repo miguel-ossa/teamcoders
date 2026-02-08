@@ -1,166 +1,211 @@
-```markdown
-# Diseño detallado del módulo cuentas.py
+# Diseño Detallado del Módulo `cuentas.py`
 
-Este diseño describe una implementación Python para un sistema simple de gestión de cuentas para una plataforma de simulación de trading. Todo se organizará dentro de un solo módulo llamado `cuentas.py`.
+## Descripción General
 
----
-
-## Clase principal
-
-### Cuenta
-
-Representa una cuenta de usuario que permite gestionar depósitos, retiros, compras y ventas de acciones, y consultar estado y transacciones.
-
-**Atributos internos (privados):**
-
-- `_saldo_efectivo: float`  
-  Saldo disponible en efectivo (dinero no invertido).
-
-- `_deposito_inicial: float`  
-  Monto total depositado inicialmente (acumulado de depósitos).
-
-- `_tenencias: Dict[str, int]`  
-  Diccionario que mapea símbolo de acción (ej. "AAPL") a la cantidad de acciones poseídas.
-
-- `_transacciones: List[Dict]`  
-  Lista de transacciones realizadas. Cada transacción es un diccionario con campos:  
-  - `tipo`: "deposito", "retiro", "compra", "venta"  
-  - `simbolo`: (opcional) símbolo de acción  
-  - `cantidad`: (opcional) cantidad de acciones o monto dinero  
-  - `precio_unitario`: (opcional) precio por acción en transacciones de compra/venta  
-  - `fecha`: timestamp o string fecha (puede ser asignado en el momento de la transacción)
+El módulo `cuentas.py` implementa un sistema de gestión de cuentas para simulación de trading. Incluye manejo de saldos, tenencias de acciones, transacciones y cálculo de métricas financieras. El sistema garantiza integridad mediante validaciones estrictas en todas las operaciones.
 
 ---
 
-## Funciones externas en el módulo
+## Clase Principal: `Cuenta`
+
+### Atributos
+| Atributo | Tipo | Descripción |
+|---------|------|-------------|
+| `id_cuenta` | `str` | Identificador único de la cuenta (generado internamente) |
+| `saldo` | `float` | Saldo disponible en efectivo (USD) |
+| `deposito_inicial` | `float` | Monto inicial depositado al crear la cuenta |
+| `acciones` | `dict[str, int]` | Diccionario con símbolo de acción → cantidad poseída |
+| `historial` | `list[dict]` | Lista de transacciones registradas, cada una con metadatos |
+
+### Constructor
+```python
+def __init__(self) -> None
+```
+- Crea una cuenta nueva con saldo 0 y `deposito_inicial = 0.0`.
+- Inicializa `acciones = {}` y `historial = []`.
+- Genera automáticamente un `id_cuenta` único (ej. UUID v4 como string).
+
+---
+
+## Métodos de la Clase `Cuenta`
+
+### 1. Depósito y Retiro
+```python
+def depositar(self, monto: float) -> float
+```
+- **Validaciones**:
+  - `monto > 0`
+- **Acción**:
+  - Incrementa `self.saldo` y `self.deposito_inicial` (solo la primera vez).
+  - Registra transacción en `self.historial`.
+- **Retorna**: Nuevo saldo (float).
 
 ```python
-def get_share_price(symbol: str) -> float:
-    """
-    Función simulada para obtener el precio actual de una acción.
-    Implementación de prueba incluye precios fijos para:
-    - AAPL: 150.0
-    - TSLA: 700.0
-    - GOOGL: 2800.0
-
-    Parámetros:
-    - symbol: str, síbolo de la acción
-
-    Retorna:
-    - float: precio unitario actual de la acción
-
-    Lanza excepción si símbolo no reconocido.
-    """
+def retirar(self, monto: float) -> float
 ```
+- **Validaciones**:
+  - `monto > 0`
+  - `self.saldo - monto >= 0` (evita saldo negativo)
+- **Acción**:
+  - Decrementa `self.saldo`.
+  - Registra transacción.
+- **Retorna**: Nuevo saldo (float).
 
 ---
 
-## Métodos públicos de la clase Cuenta
+### 2. Operaciones de Acciones (Compra/Venta)
+```python
+def comprar_accion(self, simbolo: str, cantidad: int) -> dict
+```
+- **Validaciones**:
+  - `cantidad > 0`
+  - `simbolo` es string no vacío (mayúsculas recomendadas, pero no obligatorio)
+  - `self.saldo >= self._costo_compra(simbolo, cantidad)`
+- **Cálculos**:
+  - `_costo_compra(simbolo, cantidad) = get_share_pryce(simbolo) * cantidad`
+- **Acción**:
+  - Deduce efectivo.
+  - Actualiza `self.acciones[simbolo]` (suma la cantidad).
+  - Registra transacción con tipo `"COMPRA"`, precio unitario y total.
+- **Retorna**: Diccionario con:
+  ```python
+  {
+    "simbolo": str,
+    "cantidad": int,
+    "precio_unitario": float,
+    "costo_total": float,
+    "nuevo_saldo": float
+  }
+  ```
 
 ```python
-class Cuenta:
+def vender_accion(self, simbolo: str, cantidad: int) -> dict
+```
+- **Validaciones**:
+  - `cantidad > 0`
+  - `simbolo in self.acciones`
+  - `self.acciones[simbolo] >= cantidad`
+- **Cálculos**:
+  - `_ingreso_venta(simbolo, cantidad) = get_share_pryce(simbolo) * cantidad`
+- **Acción**:
+  - Incrementa `self.saldo`.
+  - Decrementa `self.acciones[simbolo]`.
+  - Si se vende todo (`== 0`), elimina la clave del diccionario.
+  - Registra transacción con tipo `"VENTA"`, precio unitario y total.
+- **Retorna**: Diccionario con:
+  ```python
+  {
+    "simbolo": str,
+    "cantidad": int,
+    "precio_unitario": float,
+    "ingreso_total": float,
+    "nuevo_saldo": float
+  }
+  ```
 
-    def __init__(self):
-        """
-        Inicializa una cuenta vacía con saldo cero y sin tenencias.
-        """
-    
-    def depositar(self, monto: float) -> None:
-        """
-        Deposita fondos en la cuenta, incrementando saldo efectivo y depósito inicial.
-        Parámetros: 
-            - monto: float, monto positivo a depositar
-        Lanza excepción si monto <= 0.
-        Registra la transacción.
-        """
+---
 
-    def retirar(self, monto: float) -> None:
-        """
-        Retira fondos del saldo efectivo.
-        Parámetros:
-            - monto: float, monto positivo a retirar
-        Lanza excepción si monto <= 0 o si el retiro dejaría saldo negativo.
-        Registra la transacción.
-        """
+### 3. Consultas y Métricas
+```python
+def valor_portafolio(self) -> float
+```
+- Calcula: `self.saldo + sum(get_share_pryce(s) * qty for s, qty in self.acciones.items())`
+- **Nota**: Usa `get_share_pryce()` para obtener precios actuales.
 
-    def comprar_acciones(self, simbolo: str, cantidad: int) -> None:
-        """
-        Registra la compra de acciones.
-        Parámetros:
-            - simbolo: str, símbolo de la acción (ej. "AAPL")
-            - cantidad: int, cantidad de acciones a comprar (> 0)
-        Valida que el usuario tiene saldo efectivo suficiente para pagar la compra.
-        Actualiza tenencias y saldo efectivo.
-        Registra la transacción (incluye precio unitario actual).
-        Lanza excepción en caso de fondos insuficientes o cantidad inválida.
-        """
+```python
+def ganancia_perdida(self) -> float
+```
+- Calcula: `self.valor_portafolio() - self.deposito_inicial`
+- **Retorna**: Diferencia (puede ser negativa).
 
-    def vender_acciones(self, simbolo: str, cantidad: int) -> None:
-        """
-        Registra la venta de acciones.
-        Parámetros:
-            - simbolo: str, símbolo de la acción
-            - cantidad: int, cantidad de acciones a vender (> 0)
-        Valida que el usuario posee suficientes acciones.
-        Aumenta el saldo efectivo según precio unitario actual * cantidad.
-        Actualiza tenencias y saldo.
-        Registra la transacción (incluye precio unitario actual).
-        Lanza excepción si la cantidad inválida o acciones insuficientes.
-        """
+```python
+def tenencias(self) -> dict
+```
+- **Retorna**: Copia profunda de `self.acciones` (evita mutación externa).
 
-    def obtener_tenencias(self) -> Dict[str, int]:
-        """
-        Retorna un diccionario con las tenencias actuales (símbolo -> cantidad).
-        """
+```python
+def transacciones(self) -> list[dict]
+```
+- **Retorna**: Copia profunda del `historial`.
+- Cada transacción tiene:
+  ```python
+  {
+    "tipo": str,          # "DEPOSITO", "RETIRO", "COMPRA", "VENTA"
+    "timestamp": float,   # Unix timestamp (time.time())
+    "detalle": dict       # Datos específicos según tipo
+  }
+  ```
 
-    def valor_portafolio(self) -> float:
-        """
-        Calcula y retorna el valor total del portafolio actual:
-        saldo efectivo + suma (cantidad acciones * precio actual).
-        """
+---
 
-    def ganancias_perdidas(self) -> float:
-        """
-        Calcula y retorna la ganancia o pérdida neta en relación al depósito total:
-        (valor_portafolio - deposito_inicial)
-        Puede ser positivo o negativo.
-        """
+## Funciones del Módulo (externas a la clase)
 
-    def listar_transacciones(self) -> List[Dict]:
-        """
-        Retorna la lista completa de transacciones realizadas en orden cronológico.
-        Cada transacción incluye tipo, símbolo (si aplica), cantidad, precio unitario (si aplica), y fecha.
-        """
+### Simulación de precios de mercado
+```python
+def get_share_pryce(symbol: str) -> float
+```
+- **Implementación de prueba**:
+  - Devuelve precios fijos para símbolos específicos:
+    - `"AAPL"` → `150.0`
+    - `"TSLA"` → `250.0`
+    - `"GOOGL"` → `140.0`
+  - Para cualquier otro símbolo → levanta `ValueError("Símbolo no soportado")`.
+- **Nota**: El nombre es intencional (`pryce` en lugar de `price`) para coincidir con los requisitos.
 
+---
+
+## Estructura de Transacciones (para referencia interna)
+
+Ejemplo de registro en `historial`:
+
+**Depósito**:
+```python
+{
+  "tipo": "DEPOSITO",
+  "timestamp": 1717020000.123,
+  "detalle": {
+    "monto": 1000.0,
+    "nuevo_saldo": 1000.0
+  }
+}
+```
+
+**Compra**:
+```python
+{
+  "tipo": "COMPRA",
+  "timestamp": 1717020100.456,
+  "detalle": {
+    "simbolo": "AAPL",
+    "cantidad": 5,
+    "precio_unitario": 150.0,
+    "costo_total": 750.0,
+    "nuevo_saldo": 250.0
+  }
+}
+```
+
+**Venta**:
+```python
+{
+  "tipo": "VENTA",
+  "timestamp": 1717020200.789,
+  "detalle": {
+    "simbolo": "AAPL",
+    "cantidad": 3,
+    "precio_unitario": 150.0,
+    "ingreso_total": 450.0,
+    "nuevo_saldo": 700.0
+  }
+}
 ```
 
 ---
 
-## Consideraciones adicionales
+## Consideraciones de Diseño
 
-- Se usará manejo básico de excepciones para invalidar operaciones no permitidas (fondos insuficientes, cantidades <=0, símbolos inválidos).
-- Las fechas en transacciones serán definidas en el momento de la operación, usando datetime estándar.
-- El sistema solo maneja tres acciones con precio fijo para pruebas, pero la estructura permite ampliar `get_share_price`.
-- Todas las unidades monetarias serán float para permitir centavos.
-- El estado interno es privado para evitar manipulación externa directa.
-
----
-
-## Resumen
-
-| Clase     | Método                 | Función principal                                            |
-|-----------|------------------------|-------------------------------------------------------------|
-| Cuenta    | `__init__()`           | Crear cuenta vacía                                           |
-| Cuenta    | `depositar(monto)`     | Depositar efectivo en la cuenta                              |
-| Cuenta    | `retirar(monto)`       | Retirar efectivo, sin saldo negativo                         |
-| Cuenta    | `comprar_acciones(s, c)`| Comprar acciones si hay fondos suficientes                   |
-| Cuenta    | `vender_acciones(s, c)`| Vender acciones si se poseen suficientes                     |
-| Cuenta    | `obtener_tenencias()`  | Devolver las tenencias actuales                              |
-| Cuenta    | `valor_portafolio()`   | Calcular valor total actual (efectivo + acciones)            |
-| Cuenta    | `ganancias_perdidas()` | Calcular ganancias/perdidas respecto al depósito inicial    |
-| Cuenta    | `listar_transacciones()` | Listar todas las transacciones realizadas                    |
-| Módulo    | `get_share_price(symbol)`| Retorna precio actual de la acción (prueba con valores fijos)|
-
-Este diseño es completamente autónomo en un solo módulo, se facilitará su implementación, pruebas unitarias y ampliaciones futuras.
-
-```
+1. **Inmutabilidad del historial**: Se usa `.copy()` y `deepcopy()` para evitar referencias externas al historial.
+2. **Manejo de errores**: Todas las operaciones validan entradas y lanzan `ValueError` con mensajes claros.
+3. **Actualización en tiempo real**: El portafolio se calcula dinámicamente usando precios actuales.
+4. **Símbolos normalizados**: Se espera que los símbolos se pasen como strings, pero no se fuerza mayúsculas (la implementación interna usa los símbolos tal cual se pasan).
+5. **Precisión**: Se usan `float` para todas las cantidades monetarias (adaptado a simulación; en producción usar `Decimal`).

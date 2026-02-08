@@ -56,10 +56,9 @@ test_task:
     Un módulo test_{module_name} que pruebe el módulo backend dado, que estará en
     el mismo directorio.
     IMPORTANTE: entrega SOLO el código Python sin ningún formato markdown, delimitadores
-    de bloque de código ni comillas invertidas.
+    de bloque de código ni comillas invertidas. NO ejecutes los tests
     La salida debe ser código Python válido que pueda guardarse directamente en
     un archivo y ejecutarse.
-    Ejecuta los tests para asegurar que todo funciona perfectamente.
   agent: test_engineer
   context:
     - code_task
